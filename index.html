@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='UTF-8'>
+<meta name="theme-color" content="#1a3a8a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MiALBUM 2026">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>MiALBUM 2026 — 5ª Región</title>
+<script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>
+<style>
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('fonts/Rubik-Regular.woff') format('woff'),
+       url('fonts/Rubik-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('fonts/Rubik-Bold.woff') format('woff'),
+       url('fonts/Rubik-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('fonts/Rubik-ExtraBold.woff') format('woff'),
+       url('fonts/Rubik-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+
+
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--verde:#1a8a3a;--verde2:#22a84a;--rojo:#d42b2b;--oro:#f5c518;--azul:#1a3a8a;--bg:#f0f4ff;--card:#fff;--txt:#1a1a2e;--txt2:#555;--borde:#dde3f0;--ff:'Rubik',sans-serif;}
+body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100vh}
+#loading-screen{position:fixed;inset:0;background:linear-gradient(135deg,#050e24,#0d2060);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;}
+.loading-logo{font-weight:800;font-size:2.5rem;color:#fff;letter-spacing:3px;margin-bottom:.5rem;text-shadow:0 0 30px rgba(245,197,24,.5)}
+.loading-sub{font-size:.8rem;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:2rem}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--oro);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:linear-gradient(135deg,#050e24 0%,#0d2060 50%,#050e24 100%);}
+.login-logo{font-weight:800;font-size:2.8rem;color:#fff;letter-spacing:3px;text-align:center;line-height:1;margin-bottom:.2rem;text-shadow:0 0 40px rgba(245,197,24,.5);}
+.login-sub{font-size:.78rem;color:rgba(255,255,255,.55);letter-spacing:3px;text-transform:uppercase;margin-bottom:.4rem;text-align:center}
+.login-badge{background:var(--oro);color:#1a1a2e;font-weight:800;font-size:.85rem;letter-spacing:2px;padding:.25rem 1.1rem;border-radius:20px;margin-bottom:1.5rem;}
+.login-card{background:rgba(255,255,255,.98);border-radius:20px;padding:1.6rem 1.5rem;width:100%;max-width:430px;box-shadow:0 25px 70px rgba(0,0,0,.45);}
+.login-card h2{font-weight:800;font-size:1.4rem;color:var(--azul);margin-bottom:.2rem;text-align:center}
+.login-desc{font-size:.76rem;color:var(--txt2);text-align:center;margin-bottom:1rem}
+.auth-tabs{display:flex;background:#f0f4ff;border-radius:10px;padding:.25rem;margin-bottom:1rem;gap:.25rem}
+.auth-tab{flex:1;padding:.5rem;text-align:center;border:none;background:transparent;font-family:var(--ff);font-size:.82rem;font-weight:700;cursor:pointer;border-radius:8px;color:var(--txt2);transition:all .2s}
+.auth-tab.active{background:#fff;color:var(--azul);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.form-group{margin-bottom:.75rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.form-group label{display:block;font-size:.71rem;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
+.form-group input,.form-group select{width:100%;padding:.62rem .88rem;border:2px solid var(--borde);border-radius:10px;font-family:var(--ff);font-size:.88rem;color:var(--txt);transition:border-color .2s;background:#fff;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--azul)}
+.form-group input::placeholder{color:#bbb}
+.form-error{font-size:.72rem;color:var(--rojo);font-weight:700;margin-top:.2rem;display:none;padding:.4rem .6rem;background:#fff0f0;border-radius:6px}
+.form-error.show{display:block}
+.pass-reqs{margin-top:.4rem;display:none;background:#f8f9fe;border-radius:8px;padding:.5rem .7rem}
+.pass-reqs.show{display:block}
+.req{display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--txt2);padding:.15rem 0;transition:color .2s}
+.req.ok{color:var(--verde)}
+.req-icon{width:14px;height:14px;border-radius:50%;border:1.5px solid #ccc;display:flex;align-items:center;justify-content:center;font-size:.55rem;flex-shrink:0;transition:all .2s}
+.req.ok .req-icon{background:var(--verde);border-color:var(--verde);color:#fff}
+.pass-strength{height:4px;border-radius:4px;background:var(--borde);margin-top:.5rem;overflow:hidden}
+.pass-strength-bar{height:100%;border-radius:4px;transition:width .3s,background .3s;width:0}
+.confirm-msg{background:#e8f8ee;border:1.5px solid var(--verde);border-radius:12px;padding:1rem;text-align:center;display:none}
+.confirm-msg.show{display:block}
+.confirm-icon{font-size:2rem;margin-bottom:.4rem}
+.confirm-msg h3{font-weight:800;color:var(--verde);font-size:1rem;margin-bottom:.3rem}
+.confirm-msg p{font-size:.8rem;color:#166d30}
+.btn-primary{width:100%;padding:.78rem;background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;border:none;border-radius:12px;font-family:var(--ff);font-size:1rem;font-weight:800;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s;box-shadow:0 4px 15px rgba(26,138,58,.3);margin-top:.4rem;letter-spacing:.5px;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(26,138,58,.4)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-loading{display:inline-flex;align-items:center;gap:.5rem}
+.btn-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+#app{display:none;flex-direction:column;min-height:100vh;max-width:720px;margin:0 auto}
+.app-header{background:linear-gradient(135deg,#050e24,#1a3a8a);padding:.9rem 1rem .5rem;position:sticky;top:0;z-index:100;}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.app-title{font-weight:800;color:#fff;font-size:1.3rem;letter-spacing:1px}
+.app-title span{color:var(--oro)}
+.user-chip{display:flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.12);border-radius:20px;padding:.28rem .75rem;cursor:pointer;transition:background .2s;}
+.user-chip:hover{background:rgba(255,255,255,.2)}
+.user-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.68rem;flex-shrink:0;}
+.user-name{color:#fff;font-size:.78rem;font-weight:700}
+.tabs{display:flex;gap:.25rem;background:rgba(0,0,0,.25);border-radius:12px;padding:.25rem}
+.tab{flex:1;padding:.45rem .2rem;text-align:center;border:none;background:transparent;color:rgba(255,255,255,.55);font-family:var(--ff);font-size:.71rem;font-weight:700;cursor:pointer;border-radius:9px;transition:all .2s;}
+.tab.active{background:#fff;color:var(--azul)}
+.tab-icon{font-size:.9rem;display:block;margin-bottom:.1rem}
+.content{flex:1;padding:.9rem}
+.col-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.85rem}
+.stat-card{background:var(--card);border-radius:12px;padding:.65rem .35rem;text-align:center;border:1.5px solid var(--borde)}
+.stat-num{font-weight:800;font-size:1.55rem;color:var(--azul);line-height:1}
+.stat-num.verde{color:var(--verde)}.stat-num.rojo{color:var(--rojo)}.stat-num.oro{color:#a07800}
+.stat-lbl{font-size:.62rem;color:var(--txt2);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:.12rem}
+.progress-bar-wrap{background:var(--borde);border-radius:10px;height:7px;margin-bottom:.35rem;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--verde),var(--verde2));border-radius:10px;transition:width .5s}
+.progress-txt{font-size:.71rem;color:var(--txt2);font-weight:700;text-align:center;margin-bottom:.75rem}
+.leyenda{display:flex;gap:.75rem;margin-bottom:.65rem;flex-wrap:wrap}
+.ley-item{display:flex;align-items:center;gap:.32rem;font-size:.7rem;color:var(--txt2);font-weight:700}
+.ley-box{width:12px;height:12px;border-radius:3px;border:2px solid}
+.ley-box.vacia{border-color:var(--borde);background:#f8f9fe}
+.ley-box.tengo{border-color:var(--verde);background:#e8f8ee}
+.ley-box.repetida{border-color:var(--oro);background:#fff8e0}
+.ley-box.foil{border-color:#9b59b6;background:#f0e8ff}
+.buscar-wrap{position:relative;margin-bottom:.75rem}
+.buscar-input{width:100%;padding:.58rem .88rem .58rem 2.1rem;border:2px solid var(--borde);border-radius:10px;font-family:var(--ff);font-size:.86rem;}
+.buscar-input:focus{outline:none;border-color:var(--azul)}
+.buscar-icon{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:.88rem;pointer-events:none}
+.seccion-titulo{font-weight:800;font-size:.97rem;color:var(--txt);margin:1rem 0 .45rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.sec-left{display:flex;align-items:center;gap:.45rem}
+.sec-progress{font-size:.7rem;color:var(--txt2);font-weight:700;background:#f0f4ff;padding:.18rem .48rem;border-radius:8px;white-space:nowrap}
+
+/* ===== FIGURITAS ===== */
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:.4rem;margin-bottom:.3rem}
+.fig{
+  aspect-ratio:.72;border-radius:10px;cursor:pointer;position:relative;
+  overflow:hidden;border:2.5px solid var(--borde);background:#f8f9fe;
+  transition:transform .12s, border-color .15s, background .15s;
+  user-select:none;
+}
+.fig:hover{transform:scale(1.07)}
+.fig:active{transform:scale(.96)}
+
+/* Estado vacío */
+.fig .fig-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3px;}
+.fig-code{font-size:.45rem;font-weight:800;color:#aaa;line-height:1;text-align:center;margin-bottom:2px}
+.fig-nombre{font-size:.38rem;font-weight:600;color:#bbb;text-align:center;line-height:1.2;padding:0 2px}
+
+/* Estado TENGO */
+.fig.tengo{border-color:var(--verde);background:linear-gradient(135deg,#e0f7e9,#c8f0d8);}
+.fig.tengo .fig-code{color:var(--verde)}
+.fig.tengo .fig-nombre{color:#1a6b30}
+.fig.tengo::after{
+  content:'✓';
+  position:absolute;
+  top:3px;right:4px;
+  font-size:.9rem;
+  color:var(--verde);
+  font-weight:900;
+  line-height:1;
+}
+
+/* Estado REPETIDA */
+.fig.repetida{border-color:var(--oro);background:linear-gradient(135deg,#fff8df,#fff0b0);}
+.fig.repetida .fig-code{color:#a07800}
+.fig.repetida .fig-nombre{color:#6b4e00}
+.fig.repetida::after{
+  content:'×';
+  position:absolute;
+  top:2px;right:4px;
+  font-size:1rem;
+  color:var(--oro);
+  font-weight:900;
+  line-height:1;
+}
+
+/* Foil */
+.fig.foil-type{border-color:#9b59b6;background:linear-gradient(135deg,#f5eeff,#ead6ff);}
+.fig.foil-type .fig-code{color:#7b2fff}
+.fig.foil-type .fig-nombre{color:#5a1ecc}
+.fig.foil-type.tengo{border-color:#6a0dad;background:linear-gradient(135deg,#dfc9ff,#c8a0ff);}
+.fig.foil-type.repetida{border-color:#c0900a;background:linear-gradient(135deg,#fff0b0,#ffe080);}
+
+/* PANEL DE ACCIONES al tocar figurita */
+.fig-panel{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-radius:20px 20px 0 0;
+  padding:1.1rem 1rem 1.4rem;
+  box-shadow:0 -4px 30px rgba(0,0,0,.15);
+  z-index:300;
+  max-width:720px;margin:0 auto;
+}
+.fig-panel.open{display:block}
+.fig-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
+.fig-panel-overlay.open{display:block}
+.fig-panel-header{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:1rem}
+.fig-panel-code{font-size:.72rem;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px}
+.fig-panel-name{font-weight:800;font-size:1.05rem;color:var(--txt);line-height:1.2}
+.fig-panel-country{font-size:.78rem;color:var(--txt2);margin-top:.15rem}
+.fig-panel-badge{display:inline-block;padding:.15rem .55rem;border-radius:6px;font-size:.62rem;font-weight:800;margin-top:.3rem;text-transform:uppercase}
+.fig-panel-badge.foil{background:#7b2fff;color:#fff}
+.fig-panel-badge.base{background:#2a4fbb;color:#fff}
+.fig-panel-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem}
+.action-btn{
+  padding:.75rem .4rem;border:none;border-radius:12px;
+  font-family:var(--ff);font-size:.8rem;font-weight:800;cursor:pointer;
+  transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:.3rem;
+}
+.action-btn .action-icon{font-size:1.4rem}
+.action-btn.btn-tengo{background:#e8f8ee;color:var(--verde);border:2px solid var(--verde)}
+.action-btn.btn-tengo.active{background:var(--verde);color:#fff}
+.action-btn.btn-rep{background:#fff8e0;color:#a07800;border:2px solid var(--oro)}
+.action-btn.btn-rep.active{background:var(--oro);color:#1a1a2e}
+.action-btn.btn-quitar{background:#f5f5f5;color:var(--txt2);border:2px solid #ddd}
+.action-btn:active{transform:scale(.95)}
+
+.pub-form{background:var(--card);border-radius:14px;padding:.9rem;margin-bottom:.85rem;border:2px dashed var(--verde);}
+.pub-form h3{font-weight:800;font-size:.97rem;color:var(--verde);margin-bottom:.55rem}
+.fig-selector{display:flex;flex-wrap:wrap;gap:.32rem;max-height:125px;overflow-y:auto;margin-bottom:.65rem;padding:.38rem;background:#f8f9fe;border-radius:8px;border:1.5px solid var(--borde);}
+.fig-sel-item{padding:.26rem .52rem;border-radius:7px;background:#e8f0ff;color:var(--azul);font-size:.7rem;font-weight:700;cursor:pointer;border:1.5px solid #c0d0f0;transition:all .12s;}
+.fig-sel-item.sel{background:var(--oro);color:#1a1a2e;border-color:#c0900a}
+.filtros{display:flex;gap:.38rem;margin-bottom:.75rem;flex-wrap:wrap}
+.filtro-btn{padding:.33rem .72rem;border-radius:20px;border:1.5px solid var(--borde);background:var(--card);font-size:.73rem;font-weight:700;cursor:pointer;color:var(--txt2);transition:all .12s;font-family:var(--ff);}
+.filtro-btn.active{background:var(--azul);color:#fff;border-color:var(--azul)}
+.pub-card{background:var(--card);border-radius:14px;padding:.88rem;margin-bottom:.65rem;border:1.5px solid var(--borde);transition:border-color .2s,box-shadow .2s;}
+.pub-card:hover{border-color:#a0b0d0;box-shadow:0 3px 12px rgba(0,0,0,.07)}
+.pub-top{display:flex;align-items:center;gap:.62rem;margin-bottom:.55rem}
+.pub-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.88rem;color:#fff;flex-shrink:0;}
+.pub-info{flex:1}
+.pub-usuario{font-weight:800;font-size:.86rem;color:var(--txt)}
+.pub-lugar{font-size:.7rem;color:var(--txt2);display:flex;align-items:center;gap:.28rem;margin-top:.1rem;flex-wrap:wrap}
+.dist-badge{background:#e8f0ff;color:var(--azul);border-radius:8px;font-size:.67rem;font-weight:700;padding:.17rem .52rem;white-space:nowrap;}
+.dist-badge.cerca{background:#e8f8ee;color:var(--verde)}
+.figs-pub{display:flex;gap:.32rem;flex-wrap:wrap;margin-bottom:.65rem}
+.fig-pill{display:flex;align-items:center;gap:.22rem;background:#f0f4ff;border-radius:7px;padding:.23rem .52rem;font-size:.7rem;font-weight:700;color:var(--azul);border:1.5px solid #c0d0f0;}
+.fig-pill.foil{background:#f0e8ff;border-color:#c0a0f0;color:#6a0dad}
+.pub-actions{display:flex;gap:.48rem}
+.btn-msg{flex:1;padding:.48rem;border-radius:10px;border:none;cursor:pointer;font-family:var(--ff);font-size:.78rem;font-weight:700;transition:all .15s;}
+.btn-msg-main{background:var(--verde);color:#fff}.btn-msg-main:hover{background:#166d30}
+.btn-msg-sec{background:#e8f0ff;color:var(--azul)}
+.chat-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center;}
+.chat-overlay.open{display:flex}
+.chat-box{background:#fff;border-radius:20px 20px 0 0;padding:1.1rem;width:100%;max-width:720px;max-height:72vh;display:flex;flex-direction:column;}
+.chat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.88rem}
+.chat-header h3{font-weight:800;font-size:1.05rem;color:var(--azul)}
+.btn-close{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--txt2);padding:.2rem}
+.mensajes{flex:1;overflow-y:auto;margin-bottom:.88rem;display:flex;flex-direction:column;gap:.48rem;min-height:120px}
+.msg{padding:.52rem .82rem;border-radius:12px;max-width:82%;font-size:.82rem;line-height:1.4}
+.msg.yo{background:var(--azul);color:#fff;align-self:flex-end;border-radius:12px 12px 0 12px}
+.msg.otro{background:#f0f4ff;color:var(--txt);align-self:flex-start;border-radius:12px 12px 12px 0}
+.msg-time{font-size:.6rem;opacity:.62;margin-top:.18rem}
+.chat-input-row{display:flex;gap:.52rem}
+.chat-input{flex:1;padding:.62rem .88rem;border:2px solid var(--borde);border-radius:12px;font-family:var(--ff);font-size:.86rem;}
+.chat-input:focus{outline:none;border-color:var(--azul)}
+.btn-send{padding:.62rem 1rem;background:var(--verde);color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:.92rem;font-weight:700;}
+.perfil-header{background:linear-gradient(135deg,#050e24,#1a3a8a);border-radius:16px;padding:1.3rem;margin-bottom:.88rem;text-align:center;color:#fff;}
+.perfil-avatar-big{width:64px;height:64px;border-radius:50%;margin:0 auto .65rem;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.75rem;border:3px solid rgba(255,255,255,.25);}
+.perfil-nombre{font-weight:800;font-size:1.65rem}
+.perfil-lugar{font-size:.8rem;opacity:.68;margin-top:.22rem}
+.perfil-dob{font-size:.73rem;opacity:.52;margin-top:.1rem}
+.perfil-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.48rem;margin:.65rem 0 0}
+.p-stat{background:rgba(255,255,255,.1);border-radius:10px;padding:.52rem;text-align:center}
+.p-stat-n{font-weight:800;font-size:1.35rem}
+.p-stat-l{font-size:.6rem;opacity:.68;text-transform:uppercase;letter-spacing:.4px}
+.section-card{background:var(--card);border-radius:14px;padding:.88rem;margin-bottom:.68rem;border:1.5px solid var(--borde)}
+.section-card h3{font-weight:800;font-size:.92rem;color:var(--azul);margin-bottom:.72rem}
+.mis-rep-chips{display:flex;flex-wrap:wrap;gap:.32rem}
+.rep-chip{padding:.26rem .62rem;background:#fff8e0;border:1.5px solid var(--oro);border-radius:8px;font-size:.7rem;font-weight:700;color:#a07800;}
+.rep-chip.foil{background:#f0e8ff;border-color:#9b59b6;color:#6a0dad}
+.prog-country{margin-bottom:.38rem}
+.prog-country-top{display:flex;justify-content:space-between;margin-bottom:.18rem;font-size:.76rem;font-weight:700}
+.prog-bar-sm{background:var(--borde);border-radius:5px;height:5px;overflow:hidden}
+.prog-bar-sm-fill{height:100%;background:var(--verde);border-radius:5px;transition:width .4s}
+.btn-logout{width:100%;padding:.72rem;border:2px solid var(--rojo);border-radius:12px;background:transparent;color:var(--rojo);font-family:var(--ff);font-size:.86rem;font-weight:700;cursor:pointer;margin-top:.4rem;transition:all .2s;}
+.btn-logout:hover{background:var(--rojo);color:#fff}
+.toast{position:fixed;bottom:1.3rem;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a2e;color:#fff;padding:.62rem 1.2rem;border-radius:30px;font-size:.8rem;font-weight:700;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.empty-state{text-align:center;padding:1.8rem;color:var(--txt2);font-size:.86rem}
+.empty-icon{font-size:2.2rem;display:block;margin-bottom:.4rem}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#c0ccdd;border-radius:4px}
+
+/* ===== MODALES LEGALES ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:20px;width:100%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.modal-header{padding:1.1rem 1.2rem .8rem;border-bottom:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-header h3{font-weight:800;font-size:1rem;color:var(--azul)}
+.modal-body{overflow-y:auto;padding:1rem 1.2rem;flex:1;font-size:.8rem;color:var(--txt);line-height:1.7}
+.modal-body h4{font-weight:800;color:var(--azul);margin:1rem 0 .3rem;font-size:.85rem}
+.modal-body p{margin-bottom:.6rem}
+.modal-body ul{padding-left:1.2rem;margin-bottom:.6rem}
+.modal-body ul li{margin-bottom:.3rem}
+.modal-footer{padding:.8rem 1.2rem 1rem;border-top:1px solid var(--borde);flex-shrink:0}
+.modal-footer .btn-primary{margin-top:0}
+/* Checkbox TyC */
+.tyc-check-wrap{display:flex;align-items:flex-start;gap:.6rem;margin:.6rem 0 .2rem;cursor:pointer}
+.tyc-check-wrap input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--azul)}
+.tyc-check-wrap label{font-size:.75rem;color:var(--txt2);cursor:pointer;line-height:1.4}
+.tyc-check-wrap label a{color:var(--azul);font-weight:700;text-decoration:underline;cursor:pointer}
+.tyc-error{font-size:.72rem;color:var(--rojo);font-weight:700;display:none;margin-top:.2rem}
+.tyc-error.show{display:block}
+</style>
+</head>
+<body>
+<div id="loading-screen"><div class="loading-logo">MiALBUM ⚽ 2026</div><div class="loading-sub">Quinta Región</div><div class="spinner"></div></div>
+
+<div id="login-screen">
+  <div class="login-logo">MiALBUM ⚽ 2026</div>
+  <div class="login-sub">FIFA World Cup — Quinta Región</div>
+  <div class="login-badge">🇨🇱 VALPARAÍSO</div>
+  <div class="login-card">
+    <h2>Bienvenido</h2>
+    <p class="login-desc">Conecta con coleccionistas de la 5ª Región</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-registro" onclick="showAuthTab('registro')">Registro</button>
+      <button class="auth-tab" id="tab-login" onclick="showAuthTab('login')">Iniciar sesión</button>
+    </div>
+    <div id="form-registro">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input type="text" id="reg-nombre" placeholder="Gonzalo" maxlength="20"></div>
+        <div class="form-group"><label>Apellido</label><input type="text" id="reg-apellido" placeholder="Pérez" maxlength="20"></div>
+      </div>
+      <div class="form-group"><label>Fecha de nacimiento</label><input type="date" id="reg-dob" max="2010-01-01"></div>
+      <div class="form-group"><label>Tu comuna</label>
+        <select id="reg-comuna">
+          <option value="">— Selecciona tu comuna —</option>
+          <option>Algarrobo</option>          <option>Cabildo</option>          <option>Calle Larga</option>          <option>Cartagena</option>          <option>Casablanca</option>          <option>Concón</option>          <option>El Quisco</option>          <option>El Tabo</option>          <option>Hijuelas</option>          <option>La Calera</option>          <option>La Cruz</option>          <option>La Ligua</option>          <option>Limache</option>          <option>Los Andes</option>          <option>Nogales</option>          <option>Olmué</option>          <option>Papudo</option>          <option>Petorca</option>          <option>Puchuncaví</option>          <option>Quillota</option>          <option>Quilpué</option>          <option>Quintero</option>          <option>Rinconada</option>          <option>San Antonio</option>          <option>San Felipe</option>          <option>Santa María</option>          <option>Santo Domingo</option>          <option>Valparaíso</option>          <option>Villa Alemana</option>          <option>Viña del Mar</option>          <option>Zapallar</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tu@email.com"></div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres" oninput="checkPassStrength(this.value)">
+        <div class="pass-reqs" id="pass-reqs">
+          <div class="req" id="req-len"><div class="req-icon">✓</div>Mínimo 8 caracteres</div>
+          <div class="req" id="req-upper"><div class="req-icon">✓</div>Una letra mayúscula</div>
+          <div class="req" id="req-lower"><div class="req-icon">✓</div>Una letra minúscula</div>
+          <div class="req" id="req-num"><div class="req-icon">✓</div>Un número</div>
+          <div class="req" id="req-special"><div class="req-icon">✓</div>Un símbolo (!@#$%...)</div>
+          <div class="pass-strength"><div class="pass-strength-bar" id="strength-bar"></div></div>
+        </div>
+      </div>
+      <div class="tyc-check-wrap">
+        <input type="checkbox" id="tyc-check">
+        <label for="tyc-check">Acepto los <a onclick="openModal('modal-tyc')">Términos y Condiciones</a> y la <a onclick="openModal('modal-privacidad')">Política de Privacidad</a> de MiALBUM 2026</label>
+      </div>
+      <div class="tyc-error" id="tyc-error">Debes aceptar los Términos y Condiciones para continuar</div>
+      <div class="form-error" id="reg-error"></div>
+      <div class="confirm-msg" id="confirm-msg">
+        <div class="confirm-icon">📧</div>
+        <h3>¡Revisa tu correo!</h3>
+        <p id="confirm-email-txt">Te enviamos un link de confirmación. Haz clic y luego inicia sesión.</p>
+      </div>
+      <button class="btn-primary" id="btn-registro" onclick="doRegistro()">CREAR CUENTA ⚽</button>
+    </div>
+    <div id="form-login" style="display:none">
+      <div class="form-group"><label>Email</label><input type="email" id="log-email" placeholder="tu@email.com"></div>
+      <div class="form-group"><label>Contraseña</label><input type="password" id="log-pass" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-error" id="log-error"></div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">ENTRAR AL ÁLBUM ⚽</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="app-title">Mi<span>ALBUM</span> 2026</div>
+      <div class="user-chip" onclick="switchTab('usuario')">
+        <div class="user-avatar" id="hdr-avatar"></div>
+        <div class="user-name" id="hdr-name"></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('coleccion')" id="tab-coleccion"><span class="tab-icon">📚</span>Mi Colección</button>
+      <button class="tab" onclick="switchTab('intercambios')" id="tab-intercambios"><span class="tab-icon">🔄</span>Intercambios</button>
+      <button class="tab" onclick="switchTab('usuario')" id="tab-usuario"><span class="tab-icon">👤</span>Mi Usuario</button>
+    </div>
+  </div>
+  <div class="content" id="main-content"></div>
+</div>
+
+<!-- PANEL FIGURITA -->
+<div class="fig-panel-overlay" id="fig-overlay" onclick="closeFigPanel()"></div>
+<div class="fig-panel" id="fig-panel">
+  <div class="fig-panel-header">
+    <div>
+      <div class="fig-panel-code" id="fp-code"></div>
+      <div class="fig-panel-name" id="fp-name"></div>
+      <div class="fig-panel-country" id="fp-country"></div>
+      <div id="fp-badge"></div>
+    </div>
+  </div>
+  <div class="fig-panel-actions">
+    <button class="action-btn btn-tengo" id="fp-btn-tengo" onclick="marcarEstado('tengo')">
+      <span class="action-icon">✅</span>Tengo
+    </button>
+    <button class="action-btn btn-rep" id="fp-btn-rep" onclick="marcarEstado('repetida')">
+      <span class="action-icon">🔁</span>Repetida
+    </button>
+    <button class="action-btn btn-quitar" onclick="marcarEstado(null)">
+      <span class="action-icon">🗑️</span>Quitar
+    </button>
+  </div>
+</div>
+
+<div class="chat-overlay" id="chat-overlay">
+  <div class="chat-box">
+    <div class="chat-header"><h3 id="chat-title">Mensaje</h3><button class="btn-close" onclick="closeChat()">✕</button></div>
+    <div class="mensajes" id="mensajes-list"></div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chat-inp" placeholder="Escribe tu mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="btn-send" onclick="sendMsg()">➤</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var SUPABASE_URL='https://iccwefusjsbruxympgla.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljY3dlZnVzanNicnV4eW1wZ2xhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NTEzNjEsImV4cCI6MjA5MzMyNzM2MX0.klyYnoFvfnQlJtrLmDHQVI2-QT2ifRzE-KEGL04ZQXE';
+var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var SECCIONES=[{"id": "fwc", "nombre": "FIFA World Cup 2026", "bandera": "🌍", "figs": [{"code": "PL000", "nom": "Album Logo", "type": "foil"}, {"code": "FWC1", "nom": "Official Emblem (1)", "type": "foil"}, {"code": "FWC2", "nom": "Official Emblem (2)", "type": "foil"}, {"code": "FWC3", "nom": "Official Mascots", "type": "foil"}, {"code": "FWC4", "nom": "Official Slogan", "type": "foil"}, {"code": "FWC5", "nom": "Official Ball", "type": "foil"}, {"code": "FWC6", "nom": "Canadá - Sede", "type": "foil"}, {"code": "FWC7", "nom": "México - Sede", "type": "foil"}, {"code": "FWC8", "nom": "EE.UU. - Sede", "type": "foil"}, {"code": "FWC9", "nom": "Italia 1934", "type": "foil"}, {"code": "FWC10", "nom": "Uruguay 1950", "type": "foil"}, {"code": "FWC11", "nom": "Alemania Occ. 1954", "type": "foil"}, {"code": "FWC12", "nom": "Brasil 1962", "type": "foil"}, {"code": "FWC13", "nom": "Alemania Occ. 1974", "type": "foil"}, {"code": "FWC14", "nom": "Argentina 1986", "type": "foil"}, {"code": "FWC15", "nom": "Brasil 1994", "type": "foil"}, {"code": "FWC16", "nom": "Brasil 2002", "type": "foil"}, {"code": "FWC17", "nom": "Italia 2006", "type": "foil"}, {"code": "FWC18", "nom": "Alemania 2014", "type": "foil"}, {"code": "FWC19", "nom": "Argentina 2022", "type": "foil"}]}, {"id": "mex", "nombre": "México", "bandera": "🇲🇽", "figs": [{"code": "MEX01", "nom": "Emblem", "type": "foil"}, {"code": "MEX02", "nom": "Luis Malagón", "type": "Base"}, {"code": "MEX03", "nom": "Johan Vásquez", "type": "Base"}, {"code": "MEX04", "nom": "Jorge Sánchez", "type": "Base"}, {"code": "MEX05", "nom": "César Montes", "type": "Base"}, {"code": "MEX06", "nom": "Jesús Gallardo", "type": "Base"}, {"code": "MEX07", "nom": "Israel Reyes", "type": "Base"}, {"code": "MEX08", "nom": "Diego Lainez", "type": "Base"}, {"code": "MEX09", "nom": "Carlos Rodríguez", "type": "Base"}, {"code": "MEX10", "nom": "Edson Álvarez", "type": "Base"}, {"code": "MEX11", "nom": "Orbelín Pineda", "type": "Base"}, {"code": "MEX12", "nom": "Marcel Ruiz", "type": "Base"}, {"code": "MEX13", "nom": "Team Photo", "type": "Base"}, {"code": "MEX14", "nom": "Érick Sánchez", "type": "Base"}, {"code": "MEX15", "nom": "Hirving Lozano", "type": "Base"}, {"code": "MEX16", "nom": "Santiago Giménez", "type": "Base"}, {"code": "MEX17", "nom": "Raúl Jiménez", "type": "Base"}, {"code": "MEX18", "nom": "Alexis Vega", "type": "Base"}, {"code": "MEX19", "nom": "Roberto Alvarado", "type": "Base"}, {"code": "MEX20", "nom": "César Huerta", "type": "Base"}]}, {"id": "rsa", "nombre": "Sudáfrica", "bandera": "🇿🇦", "figs": [{"code": "RSA01", "nom": "Emblem", "type": "foil"}, {"code": "RSA02", "nom": "Ronwen Williams", "type": "Base"}, {"code": "RSA03", "nom": "Sipho Chaine", "type": "Base"}, {"code": "RSA04", "nom": "Aubrey Modiba", "type": "Base"}, {"code": "RSA05", "nom": "Samukele Kabini", "type": "Base"}, {"code": "RSA06", "nom": "Mbekezeli Mbokazi", "type": "Base"}, {"code": "RSA07", "nom": "Khulumani Ndamane", "type": "Base"}, {"code": "RSA08", "nom": "Siyabonga Ngezana", "type": "Base"}, {"code": "RSA09", "nom": "Khuliso Mudau", "type": "Base"}, {"code": "RSA10", "nom": "Nkosinathi Sibisi", "type": "Base"}, {"code": "RSA11", "nom": "Teboho Mokoena", "type": "Base"}, {"code": "RSA12", "nom": "Thalente Mbatha", "type": "Base"}, {"code": "RSA13", "nom": "Team Photo", "type": "Base"}, {"code": "RSA14", "nom": "Bathasi Aubaas", "type": "Base"}, {"code": "RSA15", "nom": "Yaya Sithole", "type": "Base"}, {"code": "RSA16", "nom": "Sipho Mbule", "type": "Base"}, {"code": "RSA17", "nom": "Lyle Foster", "type": "Base"}, {"code": "RSA18", "nom": "Iqraam Rayners", "type": "Base"}, {"code": "RSA19", "nom": "Mohau Nkota", "type": "Base"}, {"code": "RSA20", "nom": "Oswin Appollis", "type": "Base"}]}, {"id": "kor", "nombre": "Corea del Sur", "bandera": "🇰🇷", "figs": [{"code": "KOR01", "nom": "Emblem", "type": "foil"}, {"code": "KOR02", "nom": "Hyeon-woo Jo", "type": "Base"}, {"code": "KOR03", "nom": "Seung-Gyu Kim", "type": "Base"}, {"code": "KOR04", "nom": "Min-jae Kim", "type": "Base"}, {"code": "KOR05", "nom": "Yu-min Cho", "type": "Base"}, {"code": "KOR06", "nom": "Young-woo Seol", "type": "Base"}, {"code": "KOR07", "nom": "Han-beom Lee", "type": "Base"}, {"code": "KOR08", "nom": "Tae-seok Lee", "type": "Base"}, {"code": "KOR09", "nom": "Myung-jae Lee", "type": "Base"}, {"code": "KOR10", "nom": "Jae-sung Lee", "type": "Base"}, {"code": "KOR11", "nom": "In-beom Hwang", "type": "Base"}, {"code": "KOR12", "nom": "Kang-in Lee", "type": "Base"}, {"code": "KOR13", "nom": "Team Photo", "type": "Base"}, {"code": "KOR14", "nom": "Seung-ho Paik", "type": "Base"}, {"code": "KOR15", "nom": "Jens Castrop", "type": "Base"}, {"code": "KOR16", "nom": "Dongg-yeong Lee", "type": "Base"}, {"code": "KOR17", "nom": "Gue-sung Cho", "type": "Base"}, {"code": "KOR18", "nom": "Heung-min Son", "type": "Base"}, {"code": "KOR19", "nom": "Hee-chan Hwang", "type": "Base"}, {"code": "KOR20", "nom": "Hyeon-Gyu Oh", "type": "Base"}]}, {"id": "cze", "nombre": "Chequia", "bandera": "🇨🇿", "figs": [{"code": "CZE01", "nom": "Emblem", "type": "foil"}, {"code": "CZE02", "nom": "Matej Kovár", "type": "Base"}, {"code": "CZE03", "nom": "Jindřich Staněk", "type": "Base"}, {"code": "CZE04", "nom": "Ladislav Krejčí", "type": "Base"}, {"code": "CZE05", "nom": "Vladimír Coufal", "type": "Base"}, {"code": "CZE06", "nom": "Jaroslav Zelený", "type": "Base"}, {"code": "CZE07", "nom": "Tomáš Holeš", "type": "Base"}, {"code": "CZE08", "nom": "David Zima", "type": "Base"}, {"code": "CZE09", "nom": "Michal Sadílek", "type": "Base"}, {"code": "CZE10", "nom": "Lukáš Provod", "type": "Base"}, {"code": "CZE11", "nom": "Lukáš Červ", "type": "Base"}, {"code": "CZE12", "nom": "Tomáš Souček", "type": "Base"}, {"code": "CZE13", "nom": "Team Photo", "type": "Base"}, {"code": "CZE14", "nom": "Pavel Šulc", "type": "Base"}, {"code": "CZE15", "nom": "Matěj Vydra", "type": "Base"}, {"code": "CZE16", "nom": "Vasil Kušej", "type": "Base"}, {"code": "CZE17", "nom": "Tomáš Chorý", "type": "Base"}, {"code": "CZE18", "nom": "Václav Černý", "type": "Base"}, {"code": "CZE19", "nom": "Adam Hložek", "type": "Base"}, {"code": "CZE20", "nom": "Patrik Schick", "type": "Base"}]}, {"id": "can", "nombre": "Canadá", "bandera": "🇨🇦", "figs": [{"code": "CAN01", "nom": "Emblem", "type": "foil"}, {"code": "CAN02", "nom": "Dayne St.Clair", "type": "Base"}, {"code": "CAN03", "nom": "Alphonso Davies", "type": "Base"}, {"code": "CAN04", "nom": "Alistair Johnston", "type": "Base"}, {"code": "CAN05", "nom": "Samuel Adekugbe", "type": "Base"}, {"code": "CAN06", "nom": "Richie Laryea", "type": "Base"}, {"code": "CAN07", "nom": "Derek Cornelius", "type": "Base"}, {"code": "CAN08", "nom": "Moïse Bombito", "type": "Base"}, {"code": "CAN09", "nom": "Kamal Miller", "type": "Base"}, {"code": "CAN10", "nom": "Stephen Eustáquio", "type": "Base"}, {"code": "CAN11", "nom": "Ismaël Koné", "type": "Base"}, {"code": "CAN12", "nom": "Jonathan Osorio", "type": "Base"}, {"code": "CAN13", "nom": "Team Photo", "type": "Base"}, {"code": "CAN14", "nom": "Jacob Shaffelburg", "type": "Base"}, {"code": "CAN15", "nom": "Mathieu Choinière", "type": "Base"}, {"code": "CAN16", "nom": "Niko Sigur", "type": "Base"}, {"code": "CAN17", "nom": "Tajon Buchanan", "type": "Base"}, {"code": "CAN18", "nom": "Liam Millar", "type": "Base"}, {"code": "CAN19", "nom": "Cyle Larin", "type": "Base"}, {"code": "CAN20", "nom": "Jonathan David", "type": "Base"}]}, {"id": "bih", "nombre": "Bosnia y Herzegovina", "bandera": "🇧🇦", "figs": [{"code": "BIH01", "nom": "Emblem", "type": "foil"}, {"code": "BIH02", "nom": "Nikola Vasilj", "type": "Base"}, {"code": "BIH03", "nom": "Amer Dedić", "type": "Base"}, {"code": "BIH04", "nom": "Sead Kolašinac", "type": "Base"}, {"code": "BIH05", "nom": "Tarik Muharemović", "type": "Base"}, {"code": "BIH06", "nom": "Nihad Mujakić", "type": "Base"}, {"code": "BIH07", "nom": "Nikola Katić", "type": "Base"}, {"code": "BIH08", "nom": "Amir Hadžiahmetović", "type": "Base"}, {"code": "BIH09", "nom": "Benjamin Tahirović", "type": "Base"}, {"code": "BIH10", "nom": "Armin Gigović", "type": "Base"}, {"code": "BIH11", "nom": "Ivan Šunjić", "type": "Base"}, {"code": "BIH12", "nom": "Ivan Babić", "type": "Base"}, {"code": "BIH13", "nom": "Team Photo", "type": "Base"}, {"code": "BIH14", "nom": "Dženis Burnić", "type": "Base"}, {"code": "BIH15", "nom": "Esmir Bajraktarević", "type": "Base"}, {"code": "BIH16", "nom": "Amar Memić", "type": "Base"}, {"code": "BIH17", "nom": "Ermedin Demirović", "type": "Base"}, {"code": "BIH18", "nom": "Edin Džeko", "type": "Base"}, {"code": "BIH19", "nom": "Samed Bazdar", "type": "Base"}, {"code": "BIH20", "nom": "Haris Tabakovic", "type": "Base"}]}, {"id": "qat", "nombre": "Qatar", "bandera": "🇶🇦", "figs": [{"code": "QAT01", "nom": "Emblem", "type": "foil"}, {"code": "QAT02", "nom": "Meshaal Barsham", "type": "Base"}, {"code": "QAT03", "nom": "Sultan Albrake", "type": "Base"}, {"code": "QAT04", "nom": "Lucas Mendes", "type": "Base"}, {"code": "QAT05", "nom": "Homam Ahmed", "type": "Base"}, {"code": "QAT06", "nom": "Boualem Khoukhi", "type": "Base"}, {"code": "QAT07", "nom": "Pedro Miguel", "type": "Base"}, {"code": "QAT08", "nom": "Tarek Salman", "type": "Base"}, {"code": "QAT09", "nom": "Mohamed Al-Mannai", "type": "Base"}, {"code": "QAT10", "nom": "Karim Boudiaf", "type": "Base"}, {"code": "QAT11", "nom": "Assim Madibo", "type": "Base"}, {"code": "QAT12", "nom": "Ahmed Fatehi", "type": "Base"}, {"code": "QAT13", "nom": "Team Photo", "type": "Base"}, {"code": "QAT14", "nom": "Mohammed Waad", "type": "Base"}, {"code": "QAT15", "nom": "Abdulaziz Hatem", "type": "Base"}, {"code": "QAT16", "nom": "Hassan Al-Haydos", "type": "Base"}, {"code": "QAT17", "nom": "Edmilson Junior", "type": "Base"}, {"code": "QAT18", "nom": "Akram Hassan Afif", "type": "Base"}, {"code": "QAT19", "nom": "Ahmed Al Ganehi", "type": "Base"}, {"code": "QAT20", "nom": "Almoez Ali", "type": "Base"}]}, {"id": "sui", "nombre": "Suiza", "bandera": "🇨🇭", "figs": [{"code": "SUI01", "nom": "Emblem", "type": "foil"}, {"code": "SUI02", "nom": "Gregor Kobel", "type": "Base"}, {"code": "SUI03", "nom": "Yvon Mvogo", "type": "Base"}, {"code": "SUI04", "nom": "Manuel Akanji", "type": "Base"}, {"code": "SUI05", "nom": "Ricardo Rodríguez", "type": "Base"}, {"code": "SUI06", "nom": "Nico Elvedi", "type": "Base"}, {"code": "SUI07", "nom": "Aurèle Amenda", "type": "Base"}, {"code": "SUI08", "nom": "Silvan Widmer", "type": "Base"}, {"code": "SUI09", "nom": "Granit Xhaka", "type": "Base"}, {"code": "SUI10", "nom": "Denis Zakaria", "type": "Base"}, {"code": "SUI11", "nom": "Remo Freuler", "type": "Base"}, {"code": "SUI12", "nom": "Fabian Rieder", "type": "Base"}, {"code": "SUI13", "nom": "Team Photo", "type": "Base"}, {"code": "SUI14", "nom": "Ardon Jashari", "type": "Base"}, {"code": "SUI15", "nom": "Johan Manzambi", "type": "Base"}, {"code": "SUI16", "nom": "Michel Aebischer", "type": "Base"}, {"code": "SUI17", "nom": "Breel Embolo", "type": "Base"}, {"code": "SUI18", "nom": "Ruben Vargas", "type": "Base"}, {"code": "SUI19", "nom": "Dan Ndoye", "type": "Base"}, {"code": "SUI20", "nom": "Zeki Amdouni", "type": "Base"}]}, {"id": "bra", "nombre": "Brasil", "bandera": "🇧🇷", "figs": [{"code": "BRA01", "nom": "Emblem", "type": "foil"}, {"code": "BRA02", "nom": "Alisson", "type": "Base"}, {"code": "BRA03", "nom": "Bento", "type": "Base"}, {"code": "BRA04", "nom": "Marquinhos", "type": "Base"}, {"code": "BRA05", "nom": "Éder Militão", "type": "Base"}, {"code": "BRA06", "nom": "Gabriel Magalhães", "type": "Base"}, {"code": "BRA07", "nom": "Danilo", "type": "Base"}, {"code": "BRA08", "nom": "Wesley", "type": "Base"}, {"code": "BRA09", "nom": "Lucas Paquetá", "type": "Base"}, {"code": "BRA10", "nom": "Casemiro", "type": "Base"}, {"code": "BRA11", "nom": "Bruno Guimarães", "type": "Base"}, {"code": "BRA12", "nom": "Luiz Henrique", "type": "Base"}, {"code": "BRA13", "nom": "Team Photo", "type": "Base"}, {"code": "BRA14", "nom": "Vinicius Júnior", "type": "Base"}, {"code": "BRA15", "nom": "Rodrygo", "type": "Base"}, {"code": "BRA16", "nom": "João Pedro", "type": "Base"}, {"code": "BRA17", "nom": "Matheus Cunha", "type": "Base"}, {"code": "BRA18", "nom": "Gabriel Martinelli", "type": "Base"}, {"code": "BRA19", "nom": "Raphinha", "type": "Base"}, {"code": "BRA20", "nom": "Estévão", "type": "Base"}]}, {"id": "mar", "nombre": "Marruecos", "bandera": "🇲🇦", "figs": [{"code": "MAR01", "nom": "Emblem", "type": "foil"}, {"code": "MAR02", "nom": "Yassine Bounou", "type": "Base"}, {"code": "MAR03", "nom": "Munir El Kajoui", "type": "Base"}, {"code": "MAR04", "nom": "Achraf Hakimi", "type": "Base"}, {"code": "MAR05", "nom": "Noussair Mazraoui", "type": "Base"}, {"code": "MAR06", "nom": "Nayef Aguerd", "type": "Base"}, {"code": "MAR07", "nom": "Romain Saïss", "type": "Base"}, {"code": "MAR08", "nom": "Jawad El Yamiq", "type": "Base"}, {"code": "MAR09", "nom": "Adam Masina", "type": "Base"}, {"code": "MAR10", "nom": "Sofyan Amrabat", "type": "Base"}, {"code": "MAR11", "nom": "Azzedine Ounahi", "type": "Base"}, {"code": "MAR12", "nom": "Eliesse Ben Seghir", "type": "Base"}, {"code": "MAR13", "nom": "Team Photo", "type": "Base"}, {"code": "MAR14", "nom": "Bilal El Khannouss", "type": "Base"}, {"code": "MAR15", "nom": "Ismaël Saibari", "type": "Base"}, {"code": "MAR16", "nom": "Youssef En-Nesyri", "type": "Base"}, {"code": "MAR17", "nom": "Abde Ezzalzouli", "type": "Base"}, {"code": "MAR18", "nom": "Soufiane Rahimi", "type": "Base"}, {"code": "MAR19", "nom": "Brahim Díaz", "type": "Base"}, {"code": "MAR20", "nom": "Ayoub El Kaabi", "type": "Base"}]}, {"id": "hai", "nombre": "Haití", "bandera": "🇭🇹", "figs": [{"code": "HAI01", "nom": "Emblem", "type": "foil"}, {"code": "HAI02", "nom": "Johny Placide", "type": "Base"}, {"code": "HAI03", "nom": "Carlens Arcus", "type": "Base"}, {"code": "HAI04", "nom": "Martin Expérience", "type": "Base"}, {"code": "HAI05", "nom": "Jean-Kevin Duverne", "type": "Base"}, {"code": "HAI06", "nom": "Ricardo Adé", "type": "Base"}, {"code": "HAI07", "nom": "Duke Lacroix", "type": "Base"}, {"code": "HAI08", "nom": "Garven Metusala", "type": "Base"}, {"code": "HAI09", "nom": "Hannes Delcroix", "type": "Base"}, {"code": "HAI10", "nom": "Leverton Pierre", "type": "Base"}, {"code": "HAI11", "nom": "Danley Jean Jacques", "type": "Base"}, {"code": "HAI12", "nom": "Jean-Ricner Bellegarde", "type": "Base"}, {"code": "HAI13", "nom": "Team Photo", "type": "Base"}, {"code": "HAI14", "nom": "Christopher Attys", "type": "Base"}, {"code": "HAI15", "nom": "Derrick Etienne Jr", "type": "Base"}, {"code": "HAI16", "nom": "Josué Casimir", "type": "Base"}, {"code": "HAI17", "nom": "Ruben Providence", "type": "Base"}, {"code": "HAI18", "nom": "Duckens Nazon", "type": "Base"}, {"code": "HAI19", "nom": "Louicius Deedson", "type": "Base"}, {"code": "HAI20", "nom": "Frantzdy Pierrot", "type": "Base"}]}, {"id": "sco", "nombre": "Escocia", "bandera": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "figs": [{"code": "SCO01", "nom": "Emblem", "type": "foil"}, {"code": "SCO02", "nom": "Angus Gunn", "type": "Base"}, {"code": "SCO03", "nom": "Jack Hendry", "type": "Base"}, {"code": "SCO04", "nom": "Kieran Tierney", "type": "Base"}, {"code": "SCO05", "nom": "Aaron Hickey", "type": "Base"}, {"code": "SCO06", "nom": "Andrew Robertson", "type": "Base"}, {"code": "SCO07", "nom": "Scott McKenna", "type": "Base"}, {"code": "SCO08", "nom": "John Souttar", "type": "Base"}, {"code": "SCO09", "nom": "Anthony Ralston", "type": "Base"}, {"code": "SCO10", "nom": "Grant Hanley", "type": "Base"}, {"code": "SCO11", "nom": "Scott McTominay", "type": "Base"}, {"code": "SCO12", "nom": "Billy Gilmour", "type": "Base"}, {"code": "SCO13", "nom": "Team Photo", "type": "Base"}, {"code": "SCO14", "nom": "Lewis Ferguson", "type": "Base"}, {"code": "SCO15", "nom": "Ryan Christie", "type": "Base"}, {"code": "SCO16", "nom": "Kenny McLean", "type": "Base"}, {"code": "SCO17", "nom": "John McGinn", "type": "Base"}, {"code": "SCO18", "nom": "Lyndon Dykes", "type": "Base"}, {"code": "SCO19", "nom": "Che Adams", "type": "Base"}, {"code": "SCO20", "nom": "Ben Doak", "type": "Base"}]}, {"id": "usa", "nombre": "EE.UU.", "bandera": "🇺🇸", "figs": [{"code": "USA01", "nom": "Emblem", "type": "foil"}, {"code": "USA02", "nom": "Matt Freese", "type": "Base"}, {"code": "USA03", "nom": "Chris Richards", "type": "Base"}, {"code": "USA04", "nom": "Tim Ream", "type": "Base"}, {"code": "USA05", "nom": "Mark McKenzie", "type": "Base"}, {"code": "USA06", "nom": "Alex Freeman", "type": "Base"}, {"code": "USA07", "nom": "Antonee Robinson", "type": "Base"}, {"code": "USA08", "nom": "Tyler Adams", "type": "Base"}, {"code": "USA09", "nom": "Tanner Tessmann", "type": "Base"}, {"code": "USA10", "nom": "Weston McKennie", "type": "Base"}, {"code": "USA11", "nom": "Christian Roldan", "type": "Base"}, {"code": "USA12", "nom": "Timothy Weah", "type": "Base"}, {"code": "USA13", "nom": "Team Photo", "type": "Base"}, {"code": "USA14", "nom": "Diego Luna", "type": "Base"}, {"code": "USA15", "nom": "Malik Tillman", "type": "Base"}, {"code": "USA16", "nom": "Christian Pulisic", "type": "Base"}, {"code": "USA17", "nom": "Brenden Aaronson", "type": "Base"}, {"code": "USA18", "nom": "Ricardo Pepi", "type": "Base"}, {"code": "USA19", "nom": "Haji Wright", "type": "Base"}, {"code": "USA20", "nom": "Folarin Balogun", "type": "Base"}]}, {"id": "par", "nombre": "Paraguay", "bandera": "🇵🇾", "figs": [{"code": "PAR01", "nom": "Emblem", "type": "foil"}, {"code": "PAR02", "nom": "Roberto Fernández", "type": "Base"}, {"code": "PAR03", "nom": "Orlando Gill", "type": "Base"}, {"code": "PAR04", "nom": "Gustavo Gómez", "type": "Base"}, {"code": "PAR05", "nom": "Fabián Balbuena", "type": "Base"}, {"code": "PAR06", "nom": "Juan José Cáceres", "type": "Base"}, {"code": "PAR07", "nom": "Omar Alderete", "type": "Base"}, {"code": "PAR08", "nom": "Júnior Alonso", "type": "Base"}, {"code": "PAR09", "nom": "Mathías Villasanti", "type": "Base"}, {"code": "PAR10", "nom": "Diego Gómez", "type": "Base"}, {"code": "PAR11", "nom": "Damián Bobadilla", "type": "Base"}, {"code": "PAR12", "nom": "Andrés Cubas", "type": "Base"}, {"code": "PAR13", "nom": "Team Photo", "type": "Base"}, {"code": "PAR14", "nom": "Matías Galarza Fonda", "type": "Base"}, {"code": "PAR15", "nom": "Julio Enciso", "type": "Base"}, {"code": "PAR16", "nom": "Alejandro Romero Gamarra", "type": "Base"}, {"code": "PAR17", "nom": "Miguel Almirón", "type": "Base"}, {"code": "PAR18", "nom": "Ramón Sosa", "type": "Base"}, {"code": "PAR19", "nom": "Ángel Romero", "type": "Base"}, {"code": "PAR20", "nom": "Antonio Sanabria", "type": "Base"}]}, {"id": "aus", "nombre": "Australia", "bandera": "🇦🇺", "figs": [{"code": "AUS01", "nom": "Emblem", "type": "foil"}, {"code": "AUS02", "nom": "Mathew Ryan", "type": "Base"}, {"code": "AUS03", "nom": "Joe Gauci", "type": "Base"}, {"code": "AUS04", "nom": "Harry Souttar", "type": "Base"}, {"code": "AUS05", "nom": "Alessandro Circati", "type": "Base"}, {"code": "AUS06", "nom": "Jordan Bos", "type": "Base"}, {"code": "AUS07", "nom": "Aziz Behich", "type": "Base"}, {"code": "AUS08", "nom": "Cameron Burgess", "type": "Base"}, {"code": "AUS09", "nom": "Lewis Miller", "type": "Base"}, {"code": "AUS10", "nom": "Milos Degenek", "type": "Base"}, {"code": "AUS11", "nom": "Jackson Irvine", "type": "Base"}, {"code": "AUS12", "nom": "Riley McGree", "type": "Base"}, {"code": "AUS13", "nom": "Team Photo", "type": "Base"}, {"code": "AUS14", "nom": "Aiden O'Neill", "type": "Base"}, {"code": "AUS15", "nom": "Connor Metcalfe", "type": "Base"}, {"code": "AUS16", "nom": "Patrick Yazbek", "type": "Base"}, {"code": "AUS17", "nom": "Craig Goodwin", "type": "Base"}, {"code": "AUS18", "nom": "Kusini Yengi", "type": "Base"}, {"code": "AUS19", "nom": "Nestory Irankunda", "type": "Base"}, {"code": "AUS20", "nom": "Mohamed Touré", "type": "Base"}]}, {"id": "tur", "nombre": "Türkiye", "bandera": "🇹🇷", "figs": [{"code": "TUR01", "nom": "Emblem", "type": "foil"}, {"code": "TUR02", "nom": "Uğurcan Çakır", "type": "Base"}, {"code": "TUR03", "nom": "Mert Müldür", "type": "Base"}, {"code": "TUR04", "nom": "Zeki Çelik", "type": "Base"}, {"code": "TUR05", "nom": "Abdülkerim Bardakcı", "type": "Base"}, {"code": "TUR06", "nom": "Çağlar Söyüncü", "type": "Base"}, {"code": "TUR07", "nom": "Merih Demiral", "type": "Base"}, {"code": "TUR08", "nom": "Ferdi Kadıoğlu", "type": "Base"}, {"code": "TUR09", "nom": "Kaan Ayhan", "type": "Base"}, {"code": "TUR10", "nom": "İsmail Yüksek", "type": "Base"}, {"code": "TUR11", "nom": "Hakan Çalhanoğlu", "type": "Base"}, {"code": "TUR12", "nom": "Orkun Kökçü", "type": "Base"}, {"code": "TUR13", "nom": "Team Photo", "type": "Base"}, {"code": "TUR14", "nom": "Arda Güler", "type": "Base"}, {"code": "TUR15", "nom": "İrfan Can Kahveci", "type": "Base"}, {"code": "TUR16", "nom": "Yunus Akgün", "type": "Base"}, {"code": "TUR17", "nom": "Can Uzun", "type": "Base"}, {"code": "TUR18", "nom": "Barış Alper Yılmaz", "type": "Base"}, {"code": "TUR19", "nom": "Kerem Aktürkoğlu", "type": "Base"}, {"code": "TUR20", "nom": "Kenan Yıldız", "type": "Base"}]}, {"id": "ger", "nombre": "Alemania", "bandera": "🇩🇪", "figs": [{"code": "GER01", "nom": "Emblem", "type": "foil"}, {"code": "GER02", "nom": "Marc-André ter Stegen", "type": "Base"}, {"code": "GER03", "nom": "Jonathan Tah", "type": "Base"}, {"code": "GER04", "nom": "David Raum", "type": "Base"}, {"code": "GER05", "nom": "Nico Schlotterbeck", "type": "Base"}, {"code": "GER06", "nom": "Antonio Rüdiger", "type": "Base"}, {"code": "GER07", "nom": "Waldemar Anton", "type": "Base"}, {"code": "GER08", "nom": "Ridle Baku", "type": "Base"}, {"code": "GER09", "nom": "Maximilian Mittelstädt", "type": "Base"}, {"code": "GER10", "nom": "Joshua Kimmich", "type": "Base"}, {"code": "GER11", "nom": "Florian Wirtz", "type": "Base"}, {"code": "GER12", "nom": "Felix Nmecha", "type": "Base"}, {"code": "GER13", "nom": "Team Photo", "type": "Base"}, {"code": "GER14", "nom": "Leon Goretzka", "type": "Base"}, {"code": "GER15", "nom": "Jamal Musiala", "type": "Base"}, {"code": "GER16", "nom": "Serge Gnabry", "type": "Base"}, {"code": "GER17", "nom": "Kai Havertz", "type": "Base"}, {"code": "GER18", "nom": "Leroy Sané", "type": "Base"}, {"code": "GER19", "nom": "Karim Adeyemi", "type": "Base"}, {"code": "GER20", "nom": "Nick Woltemade", "type": "Base"}]}, {"id": "cuw", "nombre": "Curaçao", "bandera": "🇨🇼", "figs": [{"code": "CUW01", "nom": "Emblem", "type": "foil"}, {"code": "CUW02", "nom": "Eloy Room", "type": "Base"}, {"code": "CUW03", "nom": "Armando Obispo", "type": "Base"}, {"code": "CUW04", "nom": "Sherel Floranus", "type": "Base"}, {"code": "CUW05", "nom": "Jurien Gaari", "type": "Base"}, {"code": "CUW06", "nom": "Joshua Brenet", "type": "Base"}, {"code": "CUW07", "nom": "Roshon van Eijma", "type": "Base"}, {"code": "CUW08", "nom": "Shurandy Sambo", "type": "Base"}, {"code": "CUW09", "nom": "Livano Comenencia", "type": "Base"}, {"code": "CUW10", "nom": "Godfried Roemeratoe", "type": "Base"}, {"code": "CUW11", "nom": "Juninho Bacuna", "type": "Base"}, {"code": "CUW12", "nom": "Leandro Bacuna", "type": "Base"}, {"code": "CUW13", "nom": "Team Photo", "type": "Base"}, {"code": "CUW14", "nom": "Tahith Chong", "type": "Base"}, {"code": "CUW15", "nom": "Kenji Gorre", "type": "Base"}, {"code": "CUW16", "nom": "Jearl Margaritha", "type": "Base"}, {"code": "CUW17", "nom": "Jurgen Locadia", "type": "Base"}, {"code": "CUW18", "nom": "Jeremy Antonisse", "type": "Base"}, {"code": "CUW19", "nom": "Gervane Kastaneer", "type": "Base"}, {"code": "CUW20", "nom": "Sontje Hansen", "type": "Base"}]}, {"id": "civ", "nombre": "Costa de Marfil", "bandera": "🇨🇮", "figs": [{"code": "CIV01", "nom": "Emblem", "type": "foil"}, {"code": "CIV02", "nom": "Yahia Fofana", "type": "Base"}, {"code": "CIV03", "nom": "Ghislain Konan", "type": "Base"}, {"code": "CIV04", "nom": "Wilfried Singo", "type": "Base"}, {"code": "CIV05", "nom": "Odilon Kossounou", "type": "Base"}, {"code": "CIV06", "nom": "Evan Ndicka", "type": "Base"}, {"code": "CIV07", "nom": "Willy Boly", "type": "Base"}, {"code": "CIV08", "nom": "Emmanuel Agbadou", "type": "Base"}, {"code": "CIV09", "nom": "Ousmane Diomandé", "type": "Base"}, {"code": "CIV10", "nom": "Franck Kessié", "type": "Base"}, {"code": "CIV11", "nom": "Seko Fofana", "type": "Base"}, {"code": "CIV12", "nom": "Ibrahim Sangaré", "type": "Base"}, {"code": "CIV13", "nom": "Team Photo", "type": "Base"}, {"code": "CIV14", "nom": "Jean-Philippe Gbamin", "type": "Base"}, {"code": "CIV15", "nom": "Amad Diallo", "type": "Base"}, {"code": "CIV16", "nom": "Sébastien Haller", "type": "Base"}, {"code": "CIV17", "nom": "Simon Adingra", "type": "Base"}, {"code": "CIV18", "nom": "Yan Diomandé", "type": "Base"}, {"code": "CIV19", "nom": "Evann Guessand", "type": "Base"}, {"code": "CIV20", "nom": "Oumar Diakité", "type": "Base"}]}, {"id": "ecu", "nombre": "Ecuador", "bandera": "🇪🇨", "figs": [{"code": "ECU01", "nom": "Emblem", "type": "foil"}, {"code": "ECU02", "nom": "Hernán Galíndez", "type": "Base"}, {"code": "ECU03", "nom": "Gonzalo Valle", "type": "Base"}, {"code": "ECU04", "nom": "Piero Hincapié", "type": "Base"}, {"code": "ECU05", "nom": "Pervis Estupiñán", "type": "Base"}, {"code": "ECU06", "nom": "Willian Pacho", "type": "Base"}, {"code": "ECU07", "nom": "Ángelo Preciado", "type": "Base"}, {"code": "ECU08", "nom": "Joel Ordóñez", "type": "Base"}, {"code": "ECU09", "nom": "Moisés Caicedo", "type": "Base"}, {"code": "ECU10", "nom": "Alan Franco", "type": "Base"}, {"code": "ECU11", "nom": "Kendry Páez", "type": "Base"}, {"code": "ECU12", "nom": "Pedro Vite", "type": "Base"}, {"code": "ECU13", "nom": "Team Photo", "type": "Base"}, {"code": "ECU14", "nom": "John Yeboah", "type": "Base"}, {"code": "ECU15", "nom": "Leonardo Campana", "type": "Base"}, {"code": "ECU16", "nom": "Gonzalo Plata", "type": "Base"}, {"code": "ECU17", "nom": "Nilson Angulo", "type": "Base"}, {"code": "ECU18", "nom": "Alan Minda", "type": "Base"}, {"code": "ECU19", "nom": "Kevin Rodríguez", "type": "Base"}, {"code": "ECU20", "nom": "Enner Valencia", "type": "Base"}]}, {"id": "ned", "nombre": "Países Bajos", "bandera": "🇳🇱", "figs": [{"code": "NED01", "nom": "Emblem", "type": "foil"}, {"code": "NED02", "nom": "Bart Verbruggen", "type": "Base"}, {"code": "NED03", "nom": "Virgil van Dijk", "type": "Base"}, {"code": "NED04", "nom": "Micky van de Ven", "type": "Base"}, {"code": "NED05", "nom": "Jurriën Timber", "type": "Base"}, {"code": "NED06", "nom": "Denzel Dumfries", "type": "Base"}, {"code": "NED07", "nom": "Nathan Aké", "type": "Base"}, {"code": "NED08", "nom": "Jeremie Frimpong", "type": "Base"}, {"code": "NED09", "nom": "Jan Paul van Hecke", "type": "Base"}, {"code": "NED10", "nom": "Tijjani Reijnders", "type": "Base"}, {"code": "NED11", "nom": "Ryan Gravenberch", "type": "Base"}, {"code": "NED12", "nom": "Teun Koopmeiners", "type": "Base"}, {"code": "NED13", "nom": "Team Photo", "type": "Base"}, {"code": "NED14", "nom": "Frenkie de Jong", "type": "Base"}, {"code": "NED15", "nom": "Xavi Simons", "type": "Base"}, {"code": "NED16", "nom": "Justin Kluivert", "type": "Base"}, {"code": "NED17", "nom": "Memphis Depay", "type": "Base"}, {"code": "NED18", "nom": "Donyell Malen", "type": "Base"}, {"code": "NED19", "nom": "Wout Weghorst", "type": "Base"}, {"code": "NED20", "nom": "Cody Gakpo", "type": "Base"}]}, {"id": "jpn", "nombre": "Japón", "bandera": "🇯🇵", "figs": [{"code": "JPN01", "nom": "Emblem", "type": "foil"}, {"code": "JPN02", "nom": "Zion Suzuki", "type": "Base"}, {"code": "JPN03", "nom": "Henry Höröki Mochizuki", "type": "Base"}, {"code": "JPN04", "nom": "Ayumu Seko", "type": "Base"}, {"code": "JPN05", "nom": "Junnosuke Suzuki", "type": "Base"}, {"code": "JPN06", "nom": "Shōgo Taniguchi", "type": "Base"}, {"code": "JPN07", "nom": "Tsuyoshi Watanabe", "type": "Base"}, {"code": "JPN08", "nom": "Kaishü Sano", "type": "Base"}, {"code": "JPN09", "nom": "Yuki Soma", "type": "Base"}, {"code": "JPN10", "nom": "Ao Tanaka", "type": "Base"}, {"code": "JPN11", "nom": "Daichi Kamada", "type": "Base"}, {"code": "JPN12", "nom": "Takefusa Kubo", "type": "Base"}, {"code": "JPN13", "nom": "Team Photo", "type": "Base"}, {"code": "JPN14", "nom": "Ritsu Doan", "type": "Base"}, {"code": "JPN15", "nom": "Keito Nakamura", "type": "Base"}, {"code": "JPN16", "nom": "Takumi Minamino", "type": "Base"}, {"code": "JPN17", "nom": "Shūto Machino", "type": "Base"}, {"code": "JPN18", "nom": "Junya Ito", "type": "Base"}, {"code": "JPN19", "nom": "Kōki Ogawa", "type": "Base"}, {"code": "JPN20", "nom": "Ayase Ueda", "type": "Base"}]}, {"id": "swe", "nombre": "Suecia", "bandera": "🇸🇪", "figs": [{"code": "SWE01", "nom": "Emblem", "type": "foil"}, {"code": "SWE02", "nom": "Victor Johansson", "type": "Base"}, {"code": "SWE03", "nom": "Isak Hien", "type": "Base"}, {"code": "SWE04", "nom": "Gabriel Gudmundsson", "type": "Base"}, {"code": "SWE05", "nom": "Emil Holm", "type": "Base"}, {"code": "SWE06", "nom": "Victor Nilsson Lindelöf", "type": "Base"}, {"code": "SWE07", "nom": "Gustaf Lagerbielke", "type": "Base"}, {"code": "SWE08", "nom": "Lucas Bergvall", "type": "Base"}, {"code": "SWE09", "nom": "Hugo Larsson", "type": "Base"}, {"code": "SWE10", "nom": "Jesper Karlström", "type": "Base"}, {"code": "SWE11", "nom": "Yasin Ayari", "type": "Base"}, {"code": "SWE12", "nom": "Mattias Svanberg", "type": "Base"}, {"code": "SWE13", "nom": "Team Photo", "type": "Base"}, {"code": "SWE14", "nom": "Daniel Svensson", "type": "Base"}, {"code": "SWE15", "nom": "Ken Sema", "type": "Base"}, {"code": "SWE16", "nom": "Roony Bardghji", "type": "Base"}, {"code": "SWE17", "nom": "Dejan Kulusevski", "type": "Base"}, {"code": "SWE18", "nom": "Anthony Elanga", "type": "Base"}, {"code": "SWE19", "nom": "Alexander Isak", "type": "Base"}, {"code": "SWE20", "nom": "Viktor Gyökeres", "type": "Base"}]}, {"id": "tun", "nombre": "Túnez", "bandera": "🇹🇳", "figs": [{"code": "TUN01", "nom": "Emblem", "type": "foil"}, {"code": "TUN02", "nom": "Béchir Ben Said", "type": "Base"}, {"code": "TUN03", "nom": "Aymen Dahmen", "type": "Base"}, {"code": "TUN04", "nom": "Van Valery", "type": "Base"}, {"code": "TUN05", "nom": "Montassar Talbi", "type": "Base"}, {"code": "TUN06", "nom": "Yassine Meriah", "type": "Base"}, {"code": "TUN07", "nom": "Ali Abdi", "type": "Base"}, {"code": "TUN08", "nom": "Dylan Bronn", "type": "Base"}, {"code": "TUN09", "nom": "Ellyes Skhiri", "type": "Base"}, {"code": "TUN10", "nom": "Aïssa Laidouni", "type": "Base"}, {"code": "TUN11", "nom": "Ferjani Sassi", "type": "Base"}, {"code": "TUN12", "nom": "Mohamed Ali Ben Romdhane", "type": "Base"}, {"code": "TUN13", "nom": "Team Photo", "type": "Base"}, {"code": "TUN14", "nom": "Hannibal Mejbri", "type": "Base"}, {"code": "TUN15", "nom": "Elias Achouri", "type": "Base"}, {"code": "TUN16", "nom": "Elias Saad", "type": "Base"}, {"code": "TUN17", "nom": "Hazem Mastouri", "type": "Base"}, {"code": "TUN18", "nom": "Ismael Gharbi", "type": "Base"}, {"code": "TUN19", "nom": "Sayfallah Ltaief", "type": "Base"}, {"code": "TUN20", "nom": "Naïm Sliti", "type": "Base"}]}, {"id": "bel", "nombre": "Bélgica", "bandera": "🇧🇪", "figs": [{"code": "BEL01", "nom": "Emblem", "type": "foil"}, {"code": "BEL02", "nom": "Thibaut Courtois", "type": "Base"}, {"code": "BEL03", "nom": "Arthur Theate", "type": "Base"}, {"code": "BEL04", "nom": "Timothy Castagne", "type": "Base"}, {"code": "BEL05", "nom": "Zeno Debast", "type": "Base"}, {"code": "BEL06", "nom": "Brandon Mechele", "type": "Base"}, {"code": "BEL07", "nom": "Maxim De Cuyper", "type": "Base"}, {"code": "BEL08", "nom": "Thomas Meunier", "type": "Base"}, {"code": "BEL09", "nom": "Youri Tielemans", "type": "Base"}, {"code": "BEL10", "nom": "Amadou Onana", "type": "Base"}, {"code": "BEL11", "nom": "Nicolas Raskin", "type": "Base"}, {"code": "BEL12", "nom": "Alexis Saelemaekers", "type": "Base"}, {"code": "BEL13", "nom": "Team Photo", "type": "Base"}, {"code": "BEL14", "nom": "Hans Vanaken", "type": "Base"}, {"code": "BEL15", "nom": "Kevin De Bruyne", "type": "Base"}, {"code": "BEL16", "nom": "Jérémy Doku", "type": "Base"}, {"code": "BEL17", "nom": "Charles De Ketelaere", "type": "Base"}, {"code": "BEL18", "nom": "Leandro Trossard", "type": "Base"}, {"code": "BEL19", "nom": "Loïs Openda", "type": "Base"}, {"code": "BEL20", "nom": "Romelu Lukaku", "type": "Base"}]}, {"id": "egy", "nombre": "Egipto", "bandera": "🇪🇬", "figs": [{"code": "EGY01", "nom": "Emblem", "type": "foil"}, {"code": "EGY02", "nom": "Mohamed El Shenawy", "type": "Base"}, {"code": "EGY03", "nom": "Mohamed Hany", "type": "Base"}, {"code": "EGY04", "nom": "Mohamed Hamdy", "type": "Base"}, {"code": "EGY05", "nom": "Yasser Ibrahim", "type": "Base"}, {"code": "EGY06", "nom": "Khaled Sobhi", "type": "Base"}, {"code": "EGY07", "nom": "Ramy Rabia", "type": "Base"}, {"code": "EGY08", "nom": "Hossam Abdelmaguid", "type": "Base"}, {"code": "EGY09", "nom": "Ahmed Fatouh", "type": "Base"}, {"code": "EGY10", "nom": "Marwan Attia", "type": "Base"}, {"code": "EGY11", "nom": "Zizo", "type": "Base"}, {"code": "EGY12", "nom": "Hamdy Fathy", "type": "Base"}, {"code": "EGY13", "nom": "Team Photo", "type": "Base"}, {"code": "EGY14", "nom": "Mohamed Lasheen", "type": "Base"}, {"code": "EGY15", "nom": "Emam Ashour", "type": "Base"}, {"code": "EGY16", "nom": "Osama Faisal", "type": "Base"}, {"code": "EGY17", "nom": "Mohamed Salah", "type": "Base"}, {"code": "EGY18", "nom": "Mostafa Mohamed", "type": "Base"}, {"code": "EGY19", "nom": "Trezeguet", "type": "Base"}, {"code": "EGY20", "nom": "Omar Marmoush", "type": "Base"}]}, {"id": "irn", "nombre": "Irán", "bandera": "🇮🇷", "figs": [{"code": "IRN01", "nom": "Emblem", "type": "foil"}, {"code": "IRN02", "nom": "Alireza Beiranvand", "type": "Base"}, {"code": "IRN03", "nom": "Morteza Pouraliganji", "type": "Base"}, {"code": "IRN04", "nom": "Ehsan Hajsafi", "type": "Base"}, {"code": "IRN05", "nom": "Milad Mohammadi", "type": "Base"}, {"code": "IRN06", "nom": "Shojae Khalilzadeh", "type": "Base"}, {"code": "IRN07", "nom": "Ramin Rezaeian", "type": "Base"}, {"code": "IRN08", "nom": "Hossein Kanaani", "type": "Base"}, {"code": "IRN09", "nom": "Sadegh Moharrami", "type": "Base"}, {"code": "IRN10", "nom": "Saleh Hardani", "type": "Base"}, {"code": "IRN11", "nom": "Saeed Ezatolahi", "type": "Base"}, {"code": "IRN12", "nom": "Saman Ghoddos", "type": "Base"}, {"code": "IRN13", "nom": "Team Photo", "type": "Base"}, {"code": "IRN14", "nom": "Omid Noorafkan", "type": "Base"}, {"code": "IRN15", "nom": "Roozbeh Cheshmi", "type": "Base"}, {"code": "IRN16", "nom": "Mohammad Mohebi", "type": "Base"}, {"code": "IRN17", "nom": "Sardar Azmoun", "type": "Base"}, {"code": "IRN18", "nom": "Mehdi Taremi", "type": "Base"}, {"code": "IRN19", "nom": "Alireza Jahanbakhsh", "type": "Base"}, {"code": "IRN20", "nom": "Ali Gholizadeh", "type": "Base"}]}, {"id": "nzl", "nombre": "Nueva Zelanda", "bandera": "🇳🇿", "figs": [{"code": "NZL01", "nom": "Emblem", "type": "foil"}, {"code": "NZL02", "nom": "Max Crocombe", "type": "Base"}, {"code": "NZL03", "nom": "Alex Paulsen", "type": "Base"}, {"code": "NZL04", "nom": "Michael Boxall", "type": "Base"}, {"code": "NZL05", "nom": "Liberato Cacace", "type": "Base"}, {"code": "NZL06", "nom": "Tim Payne", "type": "Base"}, {"code": "NZL07", "nom": "Tyler Bindon", "type": "Base"}, {"code": "NZL08", "nom": "Francis de Vries", "type": "Base"}, {"code": "NZL09", "nom": "Finn Surman", "type": "Base"}, {"code": "NZL10", "nom": "Joe Bell", "type": "Base"}, {"code": "NZL11", "nom": "Sarpreet Singh", "type": "Base"}, {"code": "NZL12", "nom": "Ryan Thomas", "type": "Base"}, {"code": "NZL13", "nom": "Team Photo", "type": "Base"}, {"code": "NZL14", "nom": "Matthew Garbett", "type": "Base"}, {"code": "NZL15", "nom": "Marko Stamenić", "type": "Base"}, {"code": "NZL16", "nom": "Ben Old", "type": "Base"}, {"code": "NZL17", "nom": "Chris Wood", "type": "Base"}, {"code": "NZL18", "nom": "Elijah Just", "type": "Base"}, {"code": "NZL19", "nom": "Callum McCowatt", "type": "Base"}, {"code": "NZL20", "nom": "Kosta Barbarouses", "type": "Base"}]}, {"id": "esp", "nombre": "España", "bandera": "🇪🇸", "figs": [{"code": "ESP01", "nom": "Emblem", "type": "foil"}, {"code": "ESP02", "nom": "Unai Simón", "type": "Base"}, {"code": "ESP03", "nom": "Robin Le Normand", "type": "Base"}, {"code": "ESP04", "nom": "Aymeric Laporte", "type": "Base"}, {"code": "ESP05", "nom": "Dean Huijsen", "type": "Base"}, {"code": "ESP06", "nom": "Pedro Porro", "type": "Base"}, {"code": "ESP07", "nom": "Dani Carvajal", "type": "Base"}, {"code": "ESP08", "nom": "Marc Cucurella", "type": "Base"}, {"code": "ESP09", "nom": "Martín Zubimendi", "type": "Base"}, {"code": "ESP10", "nom": "Rodri", "type": "Base"}, {"code": "ESP11", "nom": "Pedri", "type": "Base"}, {"code": "ESP12", "nom": "Fabián Ruiz", "type": "Base"}, {"code": "ESP13", "nom": "Team Photo", "type": "Base"}, {"code": "ESP14", "nom": "Mikel Merino", "type": "Base"}, {"code": "ESP15", "nom": "Lamine Yamal", "type": "Base"}, {"code": "ESP16", "nom": "Dani Olmo", "type": "Base"}, {"code": "ESP17", "nom": "Nico Williams", "type": "Base"}, {"code": "ESP18", "nom": "Ferran Torres", "type": "Base"}, {"code": "ESP19", "nom": "Álvaro Morata", "type": "Base"}, {"code": "ESP20", "nom": "Mikel Oyarzabal", "type": "Base"}]}, {"id": "cpv", "nombre": "Cabo Verde", "bandera": "🇨🇻", "figs": [{"code": "CPV01", "nom": "Emblem", "type": "foil"}, {"code": "CPV02", "nom": "Vozinha", "type": "Base"}, {"code": "CPV03", "nom": "Logan Costa", "type": "Base"}, {"code": "CPV04", "nom": "Pico", "type": "Base"}, {"code": "CPV05", "nom": "Diney", "type": "Base"}, {"code": "CPV06", "nom": "Steven Moreira", "type": "Base"}, {"code": "CPV07", "nom": "Wagner Pina", "type": "Base"}, {"code": "CPV08", "nom": "João Paulo", "type": "Base"}, {"code": "CPV09", "nom": "Yannick Semedo", "type": "Base"}, {"code": "CPV10", "nom": "Kevin Pina", "type": "Base"}, {"code": "CPV11", "nom": "Patrick Andrade", "type": "Base"}, {"code": "CPV12", "nom": "Jamiro Monteiro", "type": "Base"}, {"code": "CPV13", "nom": "Team Photo", "type": "Base"}, {"code": "CPV14", "nom": "Deroy Duarte", "type": "Base"}, {"code": "CPV15", "nom": "Garry Rodrigues", "type": "Base"}, {"code": "CPV16", "nom": "Jovane Cabral", "type": "Base"}, {"code": "CPV17", "nom": "Ryan Mendes", "type": "Base"}, {"code": "CPV18", "nom": "Dailon Livramento", "type": "Base"}, {"code": "CPV19", "nom": "Willy Semedo", "type": "Base"}, {"code": "CPV20", "nom": "Bebé", "type": "Base"}]}, {"id": "ksa", "nombre": "Arabia Saudita", "bandera": "🇸🇦", "figs": [{"code": "KSA01", "nom": "Emblem", "type": "foil"}, {"code": "KSA02", "nom": "Nawaf Al-Aqidi", "type": "Base"}, {"code": "KSA03", "nom": "Abdulrahman Al-Sanbi", "type": "Base"}, {"code": "KSA04", "nom": "Saud Abdulhamid", "type": "Base"}, {"code": "KSA05", "nom": "Nawaf Bouwashl", "type": "Base"}, {"code": "KSA06", "nom": "Jihad Thakri", "type": "Base"}, {"code": "KSA07", "nom": "Moteb Al-Harbi", "type": "Base"}, {"code": "KSA08", "nom": "Hassan Altambakti", "type": "Base"}, {"code": "KSA09", "nom": "Musab Aljuwayr", "type": "Base"}, {"code": "KSA10", "nom": "Ziyad Aljohani", "type": "Base"}, {"code": "KSA11", "nom": "Abdullah Alkhaibari", "type": "Base"}, {"code": "KSA12", "nom": "Nasser Aldawsari", "type": "Base"}, {"code": "KSA13", "nom": "Team Photo", "type": "Base"}, {"code": "KSA14", "nom": "Saleh Abu Alshamat", "type": "Base"}, {"code": "KSA15", "nom": "Marwan Alsahafi", "type": "Base"}, {"code": "KSA16", "nom": "Salem Aldawsari", "type": "Base"}, {"code": "KSA17", "nom": "Abdulrahman Al-Aboud", "type": "Base"}, {"code": "KSA18", "nom": "Feras Akbrikan", "type": "Base"}, {"code": "KSA19", "nom": "Saleh Alshehri", "type": "Base"}, {"code": "KSA20", "nom": "Abdullah Al-Hamdan", "type": "Base"}]}, {"id": "uru", "nombre": "Uruguay", "bandera": "🇺🇾", "figs": [{"code": "URU01", "nom": "Emblem", "type": "foil"}, {"code": "URU02", "nom": "Sergio Rochet", "type": "Base"}, {"code": "URU03", "nom": "Santiago Mele", "type": "Base"}, {"code": "URU04", "nom": "Ronald Araújo", "type": "Base"}, {"code": "URU05", "nom": "José María Giménez", "type": "Base"}, {"code": "URU06", "nom": "Sebastián Cáceres", "type": "Base"}, {"code": "URU07", "nom": "Mathías Olivera", "type": "Base"}, {"code": "URU08", "nom": "Guillermo Varela", "type": "Base"}, {"code": "URU09", "nom": "Nahitán Nández", "type": "Base"}, {"code": "URU10", "nom": "Federico Valverde", "type": "Base"}, {"code": "URU11", "nom": "Giorgian De Arrascaeta", "type": "Base"}, {"code": "URU12", "nom": "Rodrigo Bentancur", "type": "Base"}, {"code": "URU13", "nom": "Team Photo", "type": "Base"}, {"code": "URU14", "nom": "Manuel Ugarte", "type": "Base"}, {"code": "URU15", "nom": "Nicolás De La Cruz", "type": "Base"}, {"code": "URU16", "nom": "Maxi Araújo", "type": "Base"}, {"code": "URU17", "nom": "Darwin Núñez", "type": "Base"}, {"code": "URU18", "nom": "Federico Viñas", "type": "Base"}, {"code": "URU19", "nom": "Rodrigo Aguirre", "type": "Base"}, {"code": "URU20", "nom": "Facundo Pellistri", "type": "Base"}]}, {"id": "fra", "nombre": "Francia", "bandera": "🇫🇷", "figs": [{"code": "FRA01", "nom": "Emblem", "type": "foil"}, {"code": "FRA02", "nom": "Mike Maignan", "type": "Base"}, {"code": "FRA03", "nom": "Théo Hernández", "type": "Base"}, {"code": "FRA04", "nom": "William Saliba", "type": "Base"}, {"code": "FRA05", "nom": "Jules Koundé", "type": "Base"}, {"code": "FRA06", "nom": "Ibrahima Konaté", "type": "Base"}, {"code": "FRA07", "nom": "Dayot Upamecano", "type": "Base"}, {"code": "FRA08", "nom": "Lucas Digne", "type": "Base"}, {"code": "FRA09", "nom": "Aurélien Tchouaméni", "type": "Base"}, {"code": "FRA10", "nom": "Eduardo Camavinga", "type": "Base"}, {"code": "FRA11", "nom": "Manu Koné", "type": "Base"}, {"code": "FRA12", "nom": "Adrien Rabiot", "type": "Base"}, {"code": "FRA13", "nom": "Team Photo", "type": "Base"}, {"code": "FRA14", "nom": "Michael Olise", "type": "Base"}, {"code": "FRA15", "nom": "Ousmane Dembélé", "type": "Base"}, {"code": "FRA16", "nom": "Bradley Barcola", "type": "Base"}, {"code": "FRA17", "nom": "Désiré Doué", "type": "Base"}, {"code": "FRA18", "nom": "Kingsley Coman", "type": "Base"}, {"code": "FRA19", "nom": "Hugo Ekitiké", "type": "Base"}, {"code": "FRA20", "nom": "Kylian Mbappé", "type": "Base"}]}, {"id": "sen", "nombre": "Senegal", "bandera": "🇸🇳", "figs": [{"code": "SEN01", "nom": "Emblem", "type": "foil"}, {"code": "SEN02", "nom": "Édouard Mendy", "type": "Base"}, {"code": "SEN03", "nom": "Yehvann Diouf", "type": "Base"}, {"code": "SEN04", "nom": "Moussa Niakhaté", "type": "Base"}, {"code": "SEN05", "nom": "Abdoulaye Seck", "type": "Base"}, {"code": "SEN06", "nom": "Ismail Jakobs", "type": "Base"}, {"code": "SEN07", "nom": "El Hadji Malick Diouf", "type": "Base"}, {"code": "SEN08", "nom": "Kalidou Koulibaly", "type": "Base"}, {"code": "SEN09", "nom": "Idrissa Gana Gueye", "type": "Base"}, {"code": "SEN10", "nom": "Pape Matar Sarr", "type": "Base"}, {"code": "SEN11", "nom": "Pape Gueye", "type": "Base"}, {"code": "SEN12", "nom": "Habib Diarra", "type": "Base"}, {"code": "SEN13", "nom": "Team Photo", "type": "Base"}, {"code": "SEN14", "nom": "Lamine Camara", "type": "Base"}, {"code": "SEN15", "nom": "Sadio Mané", "type": "Base"}, {"code": "SEN16", "nom": "Ismaïla Sarr", "type": "Base"}, {"code": "SEN17", "nom": "Boulaye Dia", "type": "Base"}, {"code": "SEN18", "nom": "Iliman Ndiaye", "type": "Base"}, {"code": "SEN19", "nom": "Nicolas Jackson", "type": "Base"}, {"code": "SEN20", "nom": "Krepin Diatta", "type": "Base"}]}, {"id": "irq", "nombre": "Irak", "bandera": "🇮🇶", "figs": [{"code": "IRQ01", "nom": "Emblem", "type": "foil"}, {"code": "IRQ02", "nom": "Jalal Hassan", "type": "Base"}, {"code": "IRQ03", "nom": "Rebin Sulaka", "type": "Base"}, {"code": "IRQ04", "nom": "Hussein Ali", "type": "Base"}, {"code": "IRQ05", "nom": "Akam Hashem", "type": "Base"}, {"code": "IRQ06", "nom": "Merchas Doski", "type": "Base"}, {"code": "IRQ07", "nom": "Zaid Tahseen", "type": "Base"}, {"code": "IRQ08", "nom": "Manaf Younis", "type": "Base"}, {"code": "IRQ09", "nom": "Zidane Iqbal", "type": "Base"}, {"code": "IRQ10", "nom": "Amir Al-Ammari", "type": "Base"}, {"code": "IRQ11", "nom": "Ibrahim Bayesh", "type": "Base"}, {"code": "IRQ12", "nom": "Ali Jasim", "type": "Base"}, {"code": "IRQ13", "nom": "Team Photo", "type": "Base"}, {"code": "IRQ14", "nom": "Youssef Amyn", "type": "Base"}, {"code": "IRQ15", "nom": "Aimar Sher", "type": "Base"}, {"code": "IRQ16", "nom": "Marko Farji", "type": "Base"}, {"code": "IRQ17", "nom": "Osama Rashid", "type": "Base"}, {"code": "IRQ18", "nom": "Ali Al-Hamadi", "type": "Base"}, {"code": "IRQ19", "nom": "Aymen Hussein", "type": "Base"}, {"code": "IRQ20", "nom": "Mohanad Ali", "type": "Base"}]}, {"id": "nor", "nombre": "Noruega", "bandera": "🇳🇴", "figs": [{"code": "NOR01", "nom": "Emblem", "type": "foil"}, {"code": "NOR02", "nom": "Ørjan Nyland", "type": "Base"}, {"code": "NOR03", "nom": "Julian Ryerson", "type": "Base"}, {"code": "NOR04", "nom": "Leo Østigård", "type": "Base"}, {"code": "NOR05", "nom": "Kristoffer Vassbakk Ajer", "type": "Base"}, {"code": "NOR06", "nom": "Marcus Holmgren Pedersen", "type": "Base"}, {"code": "NOR07", "nom": "David Møller Wolfe", "type": "Base"}, {"code": "NOR08", "nom": "Torbjørn Heggem", "type": "Base"}, {"code": "NOR09", "nom": "Morten Thorsby", "type": "Base"}, {"code": "NOR10", "nom": "Martin Ødegaard", "type": "Base"}, {"code": "NOR11", "nom": "Sander Berge", "type": "Base"}, {"code": "NOR12", "nom": "Andreas Schjelderup", "type": "Base"}, {"code": "NOR13", "nom": "Team Photo", "type": "Base"}, {"code": "NOR14", "nom": "Patrick Berg", "type": "Base"}, {"code": "NOR15", "nom": "Erling Haaland", "type": "Base"}, {"code": "NOR16", "nom": "Alexander Sørloth", "type": "Base"}, {"code": "NOR17", "nom": "Aron Dønnum", "type": "Base"}, {"code": "NOR18", "nom": "Jørgen Strand Larsen", "type": "Base"}, {"code": "NOR19", "nom": "Antonio Nusa", "type": "Base"}, {"code": "NOR20", "nom": "Oscar Bobb", "type": "Base"}]}, {"id": "arg", "nombre": "Argentina", "bandera": "🇦🇷", "figs": [{"code": "ARG01", "nom": "Emblem", "type": "foil"}, {"code": "ARG02", "nom": "Emiliano Martínez", "type": "Base"}, {"code": "ARG03", "nom": "Nahuel Molina", "type": "Base"}, {"code": "ARG04", "nom": "Cristian Romero", "type": "Base"}, {"code": "ARG05", "nom": "Nicolás Otamendi", "type": "Base"}, {"code": "ARG06", "nom": "Nicolás Tagliafico", "type": "Base"}, {"code": "ARG07", "nom": "Leonardo Balerdi", "type": "Base"}, {"code": "ARG08", "nom": "Enzo Fernández", "type": "Base"}, {"code": "ARG09", "nom": "Alexis Mac Allister", "type": "Base"}, {"code": "ARG10", "nom": "Rodrigo De Paul", "type": "Base"}, {"code": "ARG11", "nom": "Exequiel Palacios", "type": "Base"}, {"code": "ARG12", "nom": "Leandro Paredes", "type": "Base"}, {"code": "ARG13", "nom": "Team Photo", "type": "Base"}, {"code": "ARG14", "nom": "Nico Paz", "type": "Base"}, {"code": "ARG15", "nom": "Franco Mastantuono", "type": "Base"}, {"code": "ARG16", "nom": "Nico González", "type": "Base"}, {"code": "ARG17", "nom": "Lionel Messi", "type": "Base"}, {"code": "ARG18", "nom": "Lautaro Martínez", "type": "Base"}, {"code": "ARG19", "nom": "Julián Álvarez", "type": "Base"}, {"code": "ARG20", "nom": "Giuliano Simeone", "type": "Base"}]}, {"id": "alg", "nombre": "Argelia", "bandera": "🇩🇿", "figs": [{"code": "ALG01", "nom": "Emblem", "type": "foil"}, {"code": "ALG02", "nom": "Alexis Guendouz", "type": "Base"}, {"code": "ALG03", "nom": "Ramy Bensebaïni", "type": "Base"}, {"code": "ALG04", "nom": "Youcef Atal", "type": "Base"}, {"code": "ALG05", "nom": "Rayan Aït-Nouri", "type": "Base"}, {"code": "ALG06", "nom": "Mohamed Amine Tougaï", "type": "Base"}, {"code": "ALG07", "nom": "Aïssa Mandi", "type": "Base"}, {"code": "ALG08", "nom": "Ismaël Bennacer", "type": "Base"}, {"code": "ALG09", "nom": "Houssem Aouar", "type": "Base"}, {"code": "ALG10", "nom": "Hicham Boudaoui", "type": "Base"}, {"code": "ALG11", "nom": "Ramiz Zerrouki", "type": "Base"}, {"code": "ALG12", "nom": "Nabil Bentaleb", "type": "Base"}, {"code": "ALG13", "nom": "Team Photo", "type": "Base"}, {"code": "ALG14", "nom": "Farès Chaïbi", "type": "Base"}, {"code": "ALG15", "nom": "Riyad Mahrez", "type": "Base"}, {"code": "ALG16", "nom": "Saïd Benrahma", "type": "Base"}, {"code": "ALG17", "nom": "Anis Hadj Moussa", "type": "Base"}, {"code": "ALG18", "nom": "Amine Gouiri", "type": "Base"}, {"code": "ALG19", "nom": "Baghdad Bounedjah", "type": "Base"}, {"code": "ALG20", "nom": "Mohammed Amoura", "type": "Base"}]}, {"id": "aut", "nombre": "Austria", "bandera": "🇦🇹", "figs": [{"code": "AUT01", "nom": "Emblem", "type": "foil"}, {"code": "AUT02", "nom": "Alexander Schlager", "type": "Base"}, {"code": "AUT03", "nom": "Patrick Pentz", "type": "Base"}, {"code": "AUT04", "nom": "David Alaba", "type": "Base"}, {"code": "AUT05", "nom": "Kevin Danso", "type": "Base"}, {"code": "AUT06", "nom": "Philipp Lienhart", "type": "Base"}, {"code": "AUT07", "nom": "Stefan Posch", "type": "Base"}, {"code": "AUT08", "nom": "Philipp Mwene", "type": "Base"}, {"code": "AUT09", "nom": "Alexander Prass", "type": "Base"}, {"code": "AUT10", "nom": "Xaver Schlager", "type": "Base"}, {"code": "AUT11", "nom": "Marcel Sabitzer", "type": "Base"}, {"code": "AUT12", "nom": "Konrad Laimer", "type": "Base"}, {"code": "AUT13", "nom": "Team Photo", "type": "Base"}, {"code": "AUT14", "nom": "Florian Grillitsch", "type": "Base"}, {"code": "AUT15", "nom": "Nicolas Seiwald", "type": "Base"}, {"code": "AUT16", "nom": "Romano Schmid", "type": "Base"}, {"code": "AUT17", "nom": "Patrick Wimmer", "type": "Base"}, {"code": "AUT18", "nom": "Christoph Baumgartner", "type": "Base"}, {"code": "AUT19", "nom": "Michael Gregoritsch", "type": "Base"}, {"code": "AUT20", "nom": "Marko Arnautović", "type": "Base"}]}, {"id": "jor", "nombre": "Jordania", "bandera": "🇯🇴", "figs": [{"code": "JOR01", "nom": "Emblem", "type": "foil"}, {"code": "JOR02", "nom": "Yazeed Abulaila", "type": "Base"}, {"code": "JOR03", "nom": "Ihsan Haddad", "type": "Base"}, {"code": "JOR04", "nom": "Mohammad Abu Hashish", "type": "Base"}, {"code": "JOR05", "nom": "Yazan Al-Arab", "type": "Base"}, {"code": "JOR06", "nom": "Abdallah Nasib", "type": "Base"}, {"code": "JOR07", "nom": "Saleem Obaid", "type": "Base"}, {"code": "JOR08", "nom": "Mohammad Abualnadi", "type": "Base"}, {"code": "JOR09", "nom": "Ibrahim Saadeh", "type": "Base"}, {"code": "JOR10", "nom": "Nizar Al-Rashdan", "type": "Base"}, {"code": "JOR11", "nom": "Noor Al-Rawabdeh", "type": "Base"}, {"code": "JOR12", "nom": "Mohannad Abu Taha", "type": "Base"}, {"code": "JOR13", "nom": "Team Photo", "type": "Base"}, {"code": "JOR14", "nom": "Amer Jamous", "type": "Base"}, {"code": "JOR15", "nom": "Musa Al-Taamari", "type": "Base"}, {"code": "JOR16", "nom": "Yazan Al-Naimat", "type": "Base"}, {"code": "JOR17", "nom": "Mahmoud Al-Mardi", "type": "Base"}, {"code": "JOR18", "nom": "Ali Olwan", "type": "Base"}, {"code": "JOR19", "nom": "Mohammad Abu Zrayq", "type": "Base"}, {"code": "JOR20", "nom": "Ibrahim Sabra", "type": "Base"}]}, {"id": "por", "nombre": "Portugal", "bandera": "🇵🇹", "figs": [{"code": "POR01", "nom": "Emblem", "type": "foil"}, {"code": "POR02", "nom": "Diogo Costa", "type": "Base"}, {"code": "POR03", "nom": "José Sá", "type": "Base"}, {"code": "POR04", "nom": "Rúben Dias", "type": "Base"}, {"code": "POR05", "nom": "João Cancelo", "type": "Base"}, {"code": "POR06", "nom": "Diogo Dalot", "type": "Base"}, {"code": "POR07", "nom": "Nuno Mendes", "type": "Base"}, {"code": "POR08", "nom": "Gonçalo Inácio", "type": "Base"}, {"code": "POR09", "nom": "Bernardo Silva", "type": "Base"}, {"code": "POR10", "nom": "Bruno Fernandes", "type": "Base"}, {"code": "POR11", "nom": "Rúben Neves", "type": "Base"}, {"code": "POR12", "nom": "Vitinha", "type": "Base"}, {"code": "POR13", "nom": "Team Photo", "type": "Base"}, {"code": "POR14", "nom": "João Neves", "type": "Base"}, {"code": "POR15", "nom": "Cristiano Ronaldo", "type": "Base"}, {"code": "POR16", "nom": "Francisco Trincão", "type": "Base"}, {"code": "POR17", "nom": "João Félix", "type": "Base"}, {"code": "POR18", "nom": "Gonçalo Ramos", "type": "Base"}, {"code": "POR19", "nom": "Pedro Neto", "type": "Base"}, {"code": "POR20", "nom": "Rafael Leão", "type": "Base"}]}, {"id": "cod", "nombre": "Congo DR", "bandera": "🇨🇩", "figs": [{"code": "COD01", "nom": "Emblem", "type": "foil"}, {"code": "COD02", "nom": "Lionel Mpasi", "type": "Base"}, {"code": "COD03", "nom": "Aaron Wan-Bissaka", "type": "Base"}, {"code": "COD04", "nom": "Axel Tuanzebe", "type": "Base"}, {"code": "COD05", "nom": "Arthur Masuaku", "type": "Base"}, {"code": "COD06", "nom": "Chancel Mbemba", "type": "Base"}, {"code": "COD07", "nom": "Joris Kayembe", "type": "Base"}, {"code": "COD08", "nom": "Charles Pickel", "type": "Base"}, {"code": "COD09", "nom": "Ngal'ayel Mukau", "type": "Base"}, {"code": "COD10", "nom": "Edo Kayembe", "type": "Base"}, {"code": "COD11", "nom": "Samuel Moutoussamy", "type": "Base"}, {"code": "COD12", "nom": "Noah Sadiki", "type": "Base"}, {"code": "COD13", "nom": "Team Photo", "type": "Base"}, {"code": "COD14", "nom": "Théo Bongonda", "type": "Base"}, {"code": "COD15", "nom": "Meschak Elia", "type": "Base"}, {"code": "COD16", "nom": "Yoane Wissa", "type": "Base"}, {"code": "COD17", "nom": "Brian Cipenga", "type": "Base"}, {"code": "COD18", "nom": "Fiston Mayele", "type": "Base"}, {"code": "COD19", "nom": "Cédric Bakambu", "type": "Base"}, {"code": "COD20", "nom": "Nathanaël Mbuku", "type": "Base"}]}, {"id": "uzb", "nombre": "Uzbekistán", "bandera": "🇺🇿", "figs": [{"code": "UZB01", "nom": "Emblem", "type": "foil"}, {"code": "UZB02", "nom": "Utkir Yusupov", "type": "Base"}, {"code": "UZB03", "nom": "Farrukh Savfiev", "type": "Base"}, {"code": "UZB04", "nom": "Sherzod Nasrullaev", "type": "Base"}, {"code": "UZB05", "nom": "Umar Eshmurodov", "type": "Base"}, {"code": "UZB06", "nom": "Husniddin Aliqulov", "type": "Base"}, {"code": "UZB07", "nom": "Rustamjon Ashurmatov", "type": "Base"}, {"code": "UZB08", "nom": "Khojiakbar Alijonov", "type": "Base"}, {"code": "UZB09", "nom": "Abdukodir Khusanov", "type": "Base"}, {"code": "UZB10", "nom": "Odiljon Hamrobekov", "type": "Base"}, {"code": "UZB11", "nom": "Otabek Shukurov", "type": "Base"}, {"code": "UZB12", "nom": "Jamshid Iskanderov", "type": "Base"}, {"code": "UZB13", "nom": "Team Photo", "type": "Base"}, {"code": "UZB14", "nom": "Azizbek Turgunboev", "type": "Base"}, {"code": "UZB15", "nom": "Khojimat Erkinov", "type": "Base"}, {"code": "UZB16", "nom": "Eldor Shomurodov", "type": "Base"}, {"code": "UZB17", "nom": "Oston Urunov", "type": "Base"}, {"code": "UZB18", "nom": "Jaloliddin Masharipov", "type": "Base"}, {"code": "UZB19", "nom": "Igor Sergeev", "type": "Base"}, {"code": "UZB20", "nom": "Abbosbek Fayzullaev", "type": "Base"}]}, {"id": "col", "nombre": "Colombia", "bandera": "🇨🇴", "figs": [{"code": "COL01", "nom": "Emblem", "type": "foil"}, {"code": "COL02", "nom": "Camilo Vargas", "type": "Base"}, {"code": "COL03", "nom": "David Ospina", "type": "Base"}, {"code": "COL04", "nom": "Dávinson Sánchez", "type": "Base"}, {"code": "COL05", "nom": "Yerry Mina", "type": "Base"}, {"code": "COL06", "nom": "Daniel Muñoz", "type": "Base"}, {"code": "COL07", "nom": "Johan Mojica", "type": "Base"}, {"code": "COL08", "nom": "Jhon Lucumí", "type": "Base"}, {"code": "COL09", "nom": "Santiago Arias", "type": "Base"}, {"code": "COL10", "nom": "Jefferson Lerma", "type": "Base"}, {"code": "COL11", "nom": "Kevin Castaño", "type": "Base"}, {"code": "COL12", "nom": "Richard Ríos", "type": "Base"}, {"code": "COL13", "nom": "Team Photo", "type": "Base"}, {"code": "COL14", "nom": "James Rodríguez", "type": "Base"}, {"code": "COL15", "nom": "Juan Fernando Quintero", "type": "Base"}, {"code": "COL16", "nom": "Jorge Carrascal", "type": "Base"}, {"code": "COL17", "nom": "Jhon Arias", "type": "Base"}, {"code": "COL18", "nom": "Jhon Córdoba", "type": "Base"}, {"code": "COL19", "nom": "Luis Suárez", "type": "Base"}, {"code": "COL20", "nom": "Luis Díaz", "type": "Base"}]}, {"id": "eng", "nombre": "Inglaterra", "bandera": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "figs": [{"code": "ENG01", "nom": "Emblem", "type": "foil"}, {"code": "ENG02", "nom": "Jordan Pickford", "type": "Base"}, {"code": "ENG03", "nom": "John Stones", "type": "Base"}, {"code": "ENG04", "nom": "Marc Guéhi", "type": "Base"}, {"code": "ENG05", "nom": "Ezri Konsa", "type": "Base"}, {"code": "ENG06", "nom": "Trent Alexander-Arnold", "type": "Base"}, {"code": "ENG07", "nom": "Reece James", "type": "Base"}, {"code": "ENG08", "nom": "Dan Burn", "type": "Base"}, {"code": "ENG09", "nom": "Jordan Henderson", "type": "Base"}, {"code": "ENG10", "nom": "Declan Rice", "type": "Base"}, {"code": "ENG11", "nom": "Jude Bellingham", "type": "Base"}, {"code": "ENG12", "nom": "Cole Palmer", "type": "Base"}, {"code": "ENG13", "nom": "Team Photo", "type": "Base"}, {"code": "ENG14", "nom": "Morgan Rogers", "type": "Base"}, {"code": "ENG15", "nom": "Anthony Gordon", "type": "Base"}, {"code": "ENG16", "nom": "Phil Foden", "type": "Base"}, {"code": "ENG17", "nom": "Bukayo Saka", "type": "Base"}, {"code": "ENG18", "nom": "Harry Kane", "type": "Base"}, {"code": "ENG19", "nom": "Marcus Rashford", "type": "Base"}, {"code": "ENG20", "nom": "Ollie Watkins", "type": "Base"}]}, {"id": "cro", "nombre": "Croacia", "bandera": "🇭🇷", "figs": [{"code": "CRO01", "nom": "Emblem", "type": "foil"}, {"code": "CRO02", "nom": "Dominik Livaković", "type": "Base"}, {"code": "CRO03", "nom": "Duje Ćaleta-Car", "type": "Base"}, {"code": "CRO04", "nom": "Joško Gvardiol", "type": "Base"}, {"code": "CRO05", "nom": "Josip Stanišić", "type": "Base"}, {"code": "CRO06", "nom": "Luka Vušković", "type": "Base"}, {"code": "CRO07", "nom": "Josip Šutalo", "type": "Base"}, {"code": "CRO08", "nom": "Kristijan Jakić", "type": "Base"}, {"code": "CRO09", "nom": "Luka Modrić", "type": "Base"}, {"code": "CRO10", "nom": "Mateo Kovačić", "type": "Base"}, {"code": "CRO11", "nom": "Martin Baturina", "type": "Base"}, {"code": "CRO12", "nom": "Lovro Majer", "type": "Base"}, {"code": "CRO13", "nom": "Team Photo", "type": "Base"}, {"code": "CRO14", "nom": "Mario Pašalić", "type": "Base"}, {"code": "CRO15", "nom": "Petar Sučić", "type": "Base"}, {"code": "CRO16", "nom": "Ivan Perišić", "type": "Base"}, {"code": "CRO17", "nom": "Marco Pašalić", "type": "Base"}, {"code": "CRO18", "nom": "Ante Budimir", "type": "Base"}, {"code": "CRO19", "nom": "Andrej Kramarić", "type": "Base"}, {"code": "CRO20", "nom": "Franjo Ivanović", "type": "Base"}]}, {"id": "gha", "nombre": "Ghana", "bandera": "🇬🇭", "figs": [{"code": "GHA01", "nom": "Emblem", "type": "foil"}, {"code": "GHA02", "nom": "Lawrence Ati-Zigi", "type": "Base"}, {"code": "GHA03", "nom": "Tariq Lamptey", "type": "Base"}, {"code": "GHA04", "nom": "Mohammed Salisu", "type": "Base"}, {"code": "GHA05", "nom": "Alidu Seidu", "type": "Base"}, {"code": "GHA06", "nom": "Alexander Djiku", "type": "Base"}, {"code": "GHA07", "nom": "Gideon Mensah", "type": "Base"}, {"code": "GHA08", "nom": "Caleb Yirenkyi", "type": "Base"}, {"code": "GHA09", "nom": "Abdul Issahaku Fatawu", "type": "Base"}, {"code": "GHA10", "nom": "Thomas Partey", "type": "Base"}, {"code": "GHA11", "nom": "Salis Abdul Samed", "type": "Base"}, {"code": "GHA12", "nom": "Kamaldeen Sulemana", "type": "Base"}, {"code": "GHA13", "nom": "Team Photo", "type": "Base"}, {"code": "GHA14", "nom": "Mohammed Kudus", "type": "Base"}, {"code": "GHA15", "nom": "Iñaki Williams", "type": "Base"}, {"code": "GHA16", "nom": "Jordan Ayew", "type": "Base"}, {"code": "GHA17", "nom": "Andre Ayew", "type": "Base"}, {"code": "GHA18", "nom": "Joseph Paintsil", "type": "Base"}, {"code": "GHA19", "nom": "Osman Bukari", "type": "Base"}, {"code": "GHA20", "nom": "Antoine Semenyo", "type": "Base"}]}, {"id": "pan", "nombre": "Panamá", "bandera": "🇵🇦", "figs": [{"code": "PAN01", "nom": "Emblem", "type": "foil"}, {"code": "PAN02", "nom": "Orlando Mosquera", "type": "Base"}, {"code": "PAN03", "nom": "Luis Mejía", "type": "Base"}, {"code": "PAN04", "nom": "Fidel Escobar", "type": "Base"}, {"code": "PAN05", "nom": "Andrés Andrade", "type": "Base"}, {"code": "PAN06", "nom": "Michael Amir Murillo", "type": "Base"}, {"code": "PAN07", "nom": "Eric Davis", "type": "Base"}, {"code": "PAN08", "nom": "José Córdoba", "type": "Base"}, {"code": "PAN09", "nom": "César Blackman", "type": "Base"}, {"code": "PAN10", "nom": "Cristian Martínez", "type": "Base"}, {"code": "PAN11", "nom": "Aníbal Godoy", "type": "Base"}, {"code": "PAN12", "nom": "Adalberto Carrasquilla", "type": "Base"}, {"code": "PAN13", "nom": "Team Photo", "type": "Base"}, {"code": "PAN14", "nom": "Édgar Bárcenas", "type": "Base"}, {"code": "PAN15", "nom": "Carlos Harvey", "type": "Base"}, {"code": "PAN16", "nom": "Ismael Díaz", "type": "Base"}, {"code": "PAN17", "nom": "José Fajardo", "type": "Base"}, {"code": "PAN18", "nom": "Cecilio Waterman", "type": "Base"}, {"code": "PAN19", "nom": "José Luis Rodríguez", "type": "Base"}, {"code": "PAN20", "nom": "Alberto Quintero", "type": "Base"}]}, {"id": "cc", "nombre": "Coca-Cola / Especiales", "bandera": "🎴", "figs": [{"code": "CC01", "nom": "CC1 - Coca-Cola", "type": "Base"}, {"code": "CC02", "nom": "CC2 - Coca-Cola", "type": "Base"}, {"code": "CC03", "nom": "CC3 - Coca-Cola", "type": "Base"}, {"code": "CC04", "nom": "CC4 - Coca-Cola", "type": "Base"}, {"code": "CC05", "nom": "CC5 - Coca-Cola", "type": "Base"}, {"code": "CC06", "nom": "CC6 - Coca-Cola", "type": "Base"}, {"code": "CC07", "nom": "CC7 - Coca-Cola", "type": "Base"}, {"code": "CC08", "nom": "CC8 - Coca-Cola", "type": "Base"}, {"code": "CC09", "nom": "CC9 - Coca-Cola", "type": "Base"}, {"code": "CC10", "nom": "CC10 - Coca-Cola", "type": "Base"}, {"code": "CC11", "nom": "CC11 - Coca-Cola", "type": "Base"}, {"code": "CC12", "nom": "CC12 - Coca-Cola", "type": "Base"}, {"code": "CC13", "nom": "CC13 - Coca-Cola", "type": "Base"}, {"code": "CC14", "nom": "CC14 - Coca-Cola", "type": "Base"}]}];
+
+var COMUNAS_DIST={'Valparaíso':0,'Viña del Mar':8,'Quilpué':18,'Villa Alemana':24,'Concón':15,'Puchuncaví':30,'Quintero':35,'Casablanca':45,'San Antonio':100,'Cartagena':95,'El Quisco':110,'El Tabo':105,'Algarrobo':90,'Santo Domingo':115,'Quillota':55,'La Calera':60,'La Cruz':58,'Nogales':70,'Limache':40,'Olmué':48,'Hijuelas':65,'Los Andes':90,'San Felipe':95,'Calle Larga':88,'Rinconada':92,'Santa María':100,'La Ligua':140,'Petorca':150,'Zapallar':130,'Papudo':135,'Cabildo':120};
+var usuario=null,coleccion={},publicaciones=[],activeTab='coleccion',searchQuery='',ttFigData=null,selectedFigs=[],filtroActivo='todos',_chatTarget=null,_allPubs=[];
+
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function makeAvatar(n,a){return((n[0]||'')+(a[0]||'')).toUpperCase();}
+function makeColor(s){var c=['#1a3a8a','#1a8a3a','#d42b2b','#7b2fff','#e84a00','#0088cc','#e84393','#16a085'];var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%c.length;return c[h];}
+function getDistancia(c1,c2){return Math.abs((COMUNAS_DIST[c1]||0)-(COMUNAS_DIST[c2]||0));}
+function showError(id,msg){var el=document.getElementById(id);el.textContent=msg;el.classList.add('show');}
+function hideError(id){document.getElementById(id).classList.remove('show');}
+function setLoading(btnId,loading,txt){var b=document.getElementById(btnId);if(!b)return;b.disabled=loading;b.innerHTML=loading?'<span class="btn-loading"><span class="btn-spinner"></span>Cargando...</span>':txt;}
+
+function checkPassStrength(v){
+  document.getElementById('pass-reqs').classList.toggle('show',v.length>0);
+  var checks={'req-len':v.length>=8,'req-upper':/[A-Z]/.test(v),'req-lower':/[a-z]/.test(v),'req-num':/[0-9]/.test(v),'req-special':/[^A-Za-z0-9]/.test(v)};
+  var score=0;
+  Object.keys(checks).forEach(function(id){var el=document.getElementById(id);el.classList.toggle('ok',checks[id]);if(checks[id])score++;});
+  var bar=document.getElementById('strength-bar');bar.style.width=(score/5*100)+'%';bar.style.background=score<=2?'#d42b2b':score<=3?'#f5c518':'#1a8a3a';
+}
+function validatePass(v){return v.length>=8&&/[A-Z]/.test(v)&&/[a-z]/.test(v)&&/[0-9]/.test(v)&&/[^A-Za-z0-9]/.test(v);}
+function showAuthTab(tab){document.getElementById('form-registro').style.display=tab==='registro'?'block':'none';document.getElementById('form-login').style.display=tab==='login'?'block':'none';document.getElementById('tab-registro').classList.toggle('active',tab==='registro');document.getElementById('tab-login').classList.toggle('active',tab==='login');}
+
+async function doRegistro(){
+  hideError('reg-error');
+  var nombre=document.getElementById('reg-nombre').value.trim();
+  var apellido=document.getElementById('reg-apellido').value.trim();
+  var dob=document.getElementById('reg-dob').value;
+  var comuna=document.getElementById('reg-comuna').value;
+  var email=document.getElementById('reg-email').value.trim();
+  var pass=document.getElementById('reg-pass').value;
+  if(!nombre){showError('reg-error','Escribe tu nombre');return;}
+  if(!apellido){showError('reg-error','Escribe tu apellido');return;}
+  if(!dob){showError('reg-error','Ingresa tu fecha de nacimiento');return;}
+  if(!comuna){showError('reg-error','Selecciona tu comuna');return;}
+  if(!email||email.indexOf('@')<0){showError('reg-error','Email inválido');return;}
+  if(!validatePass(pass)){showError('reg-error','La contraseña no cumple los requisitos de seguridad');return;}
+  var tycCheck = document.getElementById('tyc-check');
+  if(!tycCheck || !tycCheck.checked){
+    document.getElementById('tyc-error').classList.add('show');
+    return;
+  }
+  document.getElementById('tyc-error').classList.remove('show');
+  setLoading('btn-registro',true,'CREAR CUENTA ⚽');
+  try{
+    var res=await sb.auth.signUp({email:email,password:pass,options:{emailRedirectTo:window.location.href}});
+    if(res.error){showError('reg-error',res.error.message);setLoading('btn-registro',false,'CREAR CUENTA ⚽');return;}
+    var uid=res.data.user.id;
+    await sb.from('profiles').upsert({id:uid,nombre:nombre,apellido:apellido,dob:dob,comuna:comuna,avatar:makeAvatar(nombre,apellido),color:makeColor(nombre+apellido)});
+    var session=res.data.session;
+    if(session&&session.access_token){await loadUserAndEnter(res.data.user);return;}
+    document.getElementById('confirm-email-txt').textContent='Te enviamos un link de confirmación a '+email+'. Haz clic en él y luego inicia sesión.';
+    document.getElementById('confirm-msg').classList.add('show');
+    document.getElementById('btn-registro').style.display='none';
+    showToast('📧 Revisa tu correo: '+email);
+  }catch(e){showError('reg-error','Error: '+e.message);}
+  setLoading('btn-registro',false,'CREAR CUENTA ⚽');
+}
+
+async function doLogin(){
+  hideError('log-error');
+  var email=document.getElementById('log-email').value.trim();
+  var pass=document.getElementById('log-pass').value;
+  if(!email){showError('log-error','Ingresa tu email');return;}
+  if(!pass){showError('log-error','Ingresa tu contraseña');return;}
+  setLoading('btn-login',true,'ENTRAR AL ÁLBUM ⚽');
+  try{
+    var res=await sb.auth.signInWithPassword({email:email,password:pass});
+    if(res.error){
+      var msg=res.error.message;
+      if(msg.indexOf('Invalid')>=0||msg.indexOf('credentials')>=0)msg='Email o contraseña incorrectos';
+      if(msg.indexOf('confirm')>=0||msg.indexOf('verified')>=0||msg.indexOf('Email not confirmed')>=0)msg='Debes confirmar tu email. Revisa tu bandeja de entrada.';
+      showError('log-error',msg);setLoading('btn-login',false,'ENTRAR AL ÁLBUM ⚽');return;
+    }
+    await loadUserAndEnter(res.data.user);
+  }catch(e){showError('log-error','Error de conexión: '+e.message);}
+  setLoading('btn-login',false,'ENTRAR AL ÁLBUM ⚽');
+}
+
+async function loadUserAndEnter(authUser){
+  var profRes=await sb.from('profiles').select('*').eq('id',authUser.id).single();
+  if(profRes.error||!profRes.data){showError('log-error','Perfil no encontrado. Regístrate de nuevo.');return;}
+  usuario=profRes.data;
+  var colRes=await sb.from('coleccion').select('sticker_code,estado').eq('user_id',usuario.id);
+  coleccion={};if(colRes.data)colRes.data.forEach(function(r){coleccion[r.sticker_code]=r.estado;});
+  var pubRes=await sb.from('publicaciones').select('sticker_code').eq('user_id',usuario.id);
+  publicaciones=pubRes.data?pubRes.data.map(function(r){return r.sticker_code;}):[]; 
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  var av=document.getElementById('hdr-avatar');
+  av.textContent=usuario.avatar||'?';av.style.background=usuario.color||'#1a3a8a';av.style.color='#fff';
+  document.getElementById('hdr-name').textContent=usuario.nombre||'';
+  switchTab('coleccion');
+}
+
+async function initApp(){
+  try{
+    var sessRes=await sb.auth.getSession();
+    var sess=sessRes.data&&sessRes.data.session;
+    document.getElementById('loading-screen').style.display='none';
+    if(sess&&sess.user){document.getElementById('login-screen').style.display='none';await loadUserAndEnter(sess.user);}
+    else{document.getElementById('login-screen').style.display='flex';}
+  }catch(e){document.getElementById('loading-screen').style.display='none';document.getElementById('login-screen').style.display='flex';}
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  var c=document.getElementById('main-content');
+  if(tab==='coleccion')c.innerHTML=renderColeccion();
+  else if(tab==='intercambios'){c.innerHTML='<div class="empty-state"><span class="empty-icon">⏳</span>Cargando...</div>';loadIntercambios();}
+  else c.innerHTML=renderUsuario();
+}
+
+/* ===== COLECCIÓN con panel táctil ===== */
+function getFigClass(fig,estado){
+  var cls='fig';
+  if(estado)cls+=' '+estado;
+  else if(fig.type==='foil')cls+=' foil-type';
+  return cls;
+}
+
+function renderColeccion(){
+  var tengo=0,rep=0;
+  var keys=Object.keys(coleccion);
+  for(var i=0;i<keys.length;i++){
+    if(coleccion[keys[i]]==='tengo'){tengo++;}
+    else if(coleccion[keys[i]]==='repetida'){tengo++;rep++;} // repetida cuenta como tengo también
+  }
+  var total=SECCIONES.reduce(function(a,s){return a+s.figs.length;},0);
+  var pct=total>0?Math.round((tengo/total)*100):0;
+  var foilCount=0;SECCIONES.forEach(function(s){s.figs.forEach(function(f){if(f.type==='foil'&&(coleccion[f.code]==='tengo'||coleccion[f.code]==='repetida'))foilCount++;});});
+  var h='<div class="col-stats">'
+    +'<div class="stat-card"><div class="stat-num">'+total+'</div><div class="stat-lbl">Total</div></div>'
+    +'<div class="stat-card"><div class="stat-num verde">'+tengo+'</div><div class="stat-lbl">Tengo</div></div>'
+    +'<div class="stat-card"><div class="stat-num rojo">'+rep+'</div><div class="stat-lbl">Repetidas</div></div>'
+    +'<div class="stat-card"><div class="stat-num oro">'+foilCount+'</div><div class="stat-lbl">Foils</div></div>'
+    +'</div>'
+    +'<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pct+'%"></div></div>'
+    +'<div class="progress-txt">'+pct+'% completado — '+(total-tengo)+' figuritas restantes</div>'
+    +'<div class="leyenda">'
+    +'<div class="ley-item"><div class="ley-box vacia"></div>Sin pegar</div>'
+    +'<div class="ley-item"><div class="ley-box tengo"></div>Tengo ✓</div>'
+    +'<div class="ley-item"><div class="ley-box repetida"></div>Repetida ×</div>'
+    +'<div class="ley-item"><div class="ley-box foil"></div>Foil</div>'
+    +'</div>'
+    +'<div class="buscar-wrap"><span class="buscar-icon">🔍</span>'
+    +'<input class="buscar-input" id="buscar-inp" placeholder="Buscar jugador o código..." value="'+searchQuery.replace(/"/g,'&quot;')+'" oninput="onSearch(this.value)">'
+    +'</div>';
+  var q=searchQuery.toLowerCase();
+  SECCIONES.forEach(function(sec){
+    var figsVis=q?sec.figs.filter(function(f){return f.nom.toLowerCase().indexOf(q)>=0||f.code.toLowerCase().indexOf(q)>=0||sec.nombre.toLowerCase().indexOf(q)>=0;}):sec.figs;
+    if(!figsVis.length)return;
+    var secTengo=sec.figs.filter(function(f){return coleccion[f.code]==='tengo'||coleccion[f.code]==='repetida';}).length;
+    h+='<div class="seccion-titulo"><div class="sec-left"><span>'+sec.bandera+'</span>'+sec.nombre+'</div>'
+      +'<span class="sec-progress">'+secTengo+'/'+sec.figs.length+'</span></div><div class="fig-grid">';
+    figsVis.forEach(function(f){
+      var estado=coleccion[f.code]||'';
+      var sc=f.code.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var sn=f.nom.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      var sky=sec.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      h+='<div class="'+getFigClass(f,estado)+'" onclick="openFigPanel(\''+sc+'\',\''+sn+'\',\''+sky+'\',\''+f.type+'\')">'
+        +'<div class="fig-inner">'
+        +'<div class="fig-code">'+f.code+'</div>'
+        +'<div class="fig-nombre">'+f.nom+'</div>'
+        +'</div></div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+
+function onSearch(v){searchQuery=v;document.getElementById('main-content').innerHTML=renderColeccion();var el=document.getElementById('buscar-inp');if(el){el.focus();el.setSelectionRange(v.length,v.length);}}
+
+/* Panel inferior para marcar figuritas */
+function openFigPanel(code,nom,country,type){
+  ttFigData={code:code,nom:nom,country:country,type:type};
+  document.getElementById('fp-code').textContent=code;
+  document.getElementById('fp-name').textContent=nom;
+  document.getElementById('fp-country').textContent=country+' — '+(type==='foil'?'⭐ Foil':'Base');
+  document.getElementById('fp-badge').innerHTML=type==='foil'?'<span class="fig-panel-badge foil">⭐ Foil</span>':'<span class="fig-panel-badge base">Base</span>';
+  var estado=coleccion[code]||'';
+  document.getElementById('fp-btn-tengo').classList.toggle('active',estado==='tengo'||estado==='repetida');
+  document.getElementById('fp-btn-rep').classList.toggle('active',estado==='repetida');
+  document.getElementById('fig-panel').classList.add('open');
+  document.getElementById('fig-overlay').classList.add('open');
+}
+function closeFigPanel(){
+  document.getElementById('fig-panel').classList.remove('open');
+  document.getElementById('fig-overlay').classList.remove('open');
+}
+
+async function marcarEstado(estado){
+  if(!ttFigData)return;
+  var code=ttFigData.code;
+  var prevEstado=coleccion[code]||'';
+
+  // LÓGICA CORRECTA:
+  // - "tengo" y "repetida" son independientes en el conteo
+  // - "tengo" = la tienes (cuenta para el progreso)
+  // - "repetida" = la tienes Y además te sobra una copia
+  // - Si marcas "repetida", automáticamente también cuenta como "tengo"
+  // - "quitar" = elimina todo estado
+  // - Si tocas el mismo botón que ya está activo, lo quita (toggle off)
+
+  if(estado===null){
+    // Quitar todo
+    delete coleccion[code];
+    await sb.from('coleccion').delete().eq('user_id',usuario.id).eq('sticker_code',code);
+    showToast(ttFigData.nom+' → quitada');
+  } else if(estado==='tengo'){
+    if(prevEstado==='tengo'){
+      // Toggle off tengo (pero mantener repetida si la tenía)
+      delete coleccion[code];
+      await sb.from('coleccion').delete().eq('user_id',usuario.id).eq('sticker_code',code);
+      showToast(ttFigData.nom+' → quitada');
+    } else if(prevEstado==='repetida'){
+      // Tenía repetida, quitar la repetida pero mantener como tengo
+      coleccion[code]='tengo';
+      await sb.from('coleccion').upsert({user_id:usuario.id,sticker_code:code,estado:'tengo'},{onConflict:'user_id,sticker_code'});
+      showToast('✅ '+ttFigData.nom+' → Solo Tengo (sin repetida)');
+    } else {
+      // No tenía nada → marcar como tengo
+      coleccion[code]='tengo';
+      await sb.from('coleccion').upsert({user_id:usuario.id,sticker_code:code,estado:'tengo'},{onConflict:'user_id,sticker_code'});
+      showToast('✅ '+ttFigData.nom+' → Tengo');
+    }
+  } else if(estado==='repetida'){
+    if(prevEstado==='repetida'){
+      // Toggle off repetida → vuelve a solo "tengo" (sigue contando)
+      coleccion[code]='tengo';
+      await sb.from('coleccion').upsert({user_id:usuario.id,sticker_code:code,estado:'tengo'},{onConflict:'user_id,sticker_code'});
+      showToast('✅ '+ttFigData.nom+' → Solo Tengo (sin repetida)');
+    } else {
+      // Marcar como repetida (implica que también la tienes → cuenta en progreso)
+      coleccion[code]='repetida';
+      await sb.from('coleccion').upsert({user_id:usuario.id,sticker_code:code,estado:'repetida'},{onConflict:'user_id,sticker_code'});
+      showToast('🔁 '+ttFigData.nom+' → Repetida (también cuenta como Tengo)');
+    }
+  }
+
+  // Actualizar botones del panel
+  var cur=coleccion[code]||'';
+  // Tengo activo si estado es 'tengo' O 'repetida' (porque repetida implica tenerla)
+  document.getElementById('fp-btn-tengo').classList.toggle('active', cur==='tengo'||cur==='repetida');
+  document.getElementById('fp-btn-rep').classList.toggle('active', cur==='repetida');
+  // Actualizar figurita en grid sin cerrar panel
+  var figs=document.querySelectorAll('.fig');
+  figs.forEach(function(el){
+    var onclick=el.getAttribute('onclick')||'';
+    if(onclick.indexOf("'"+code+"'")>=0||onclick.indexOf('"'+code+'"')>=0){
+      el.className='fig';
+      if(coleccion[code])el.classList.add(coleccion[code]);
+      else if(ttFigData.type==='foil')el.classList.add('foil-type');
+    }
+  });
+  // Actualizar stats
+  updateStats();
+}
+
+function updateStats(){
+  var tengo=0,rep=0;var keys=Object.keys(coleccion);
+  for(var i=0;i<keys.length;i++){
+    if(coleccion[keys[i]]==='tengo'){tengo++;}
+    else if(coleccion[keys[i]]==='repetida'){tengo++;rep++;}
+  }
+  var total=SECCIONES.reduce(function(a,s){return a+s.figs.length;},0);
+  var pct=total>0?Math.round((tengo/total)*100):0;
+  var statNums=document.querySelectorAll('.stat-num');
+  if(statNums[1])statNums[1].textContent=tengo;
+  if(statNums[2])statNums[2].textContent=rep;
+  var bar=document.querySelector('.progress-bar');
+  if(bar)bar.style.width=pct+'%';
+  var ptxt=document.querySelector('.progress-txt');
+  if(ptxt)ptxt.textContent=pct+'% completado — '+(total-tengo)+' figuritas restantes';
+}
+
+/* ===== INTERCAMBIOS ===== */
+async function loadIntercambios(){
+  var allFigs=[];SECCIONES.forEach(function(s){s.figs.forEach(function(f){allFigs.push({code:f.code,nom:f.nom,type:f.type,pais:s.nombre,bandera:s.bandera});});});
+  var res=await sb.from('publicaciones').select('sticker_code,user_id,profiles(id,nombre,apellido,comuna,avatar,color)').neq('user_id',usuario.id);
+  var pubsMap={};
+  if(res.data){res.data.forEach(function(r){var uid=r.user_id;if(!pubsMap[uid])pubsMap[uid]={uid:uid,profile:r.profiles,reps:[]};var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===r.sticker_code){f=allFigs[i];break;}}if(f)pubsMap[uid].reps.push({code:r.sticker_code,nom:f.nom,tipo:f.type,pais:f.pais});});}
+  _allPubs=Object.values(pubsMap);
+  document.getElementById('main-content').innerHTML=renderIntercambiosHTML(allFigs);
+}
+
+function renderIntercambiosHTML(allFigs){
+  var misRep=Object.keys(coleccion).filter(function(c){return coleccion[c]==='repetida';});
+  var h='<div class="pub-form"><h3>📤 PUBLICAR MIS REPETIDAS</h3>';
+  if(misRep.length===0){h+='<div style="font-size:.8rem;color:var(--txt2);text-align:center;padding:.4rem">Aún no tienes figuritas repetidas.<br><small>Ve a Mi Colección y marca con 🔁</small></div>';}
+  else{
+    h+='<div style="font-size:.72rem;font-weight:700;color:var(--txt2);margin-bottom:.32rem">Selecciona las que quieres publicar:</div><div class="fig-selector" id="fig-sel-list">';
+    misRep.forEach(function(code){var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===code){f=allFigs[i];break;}}if(f){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var isSel=selectedFigs.indexOf(code)>=0;h+='<div class="fig-sel-item'+(isSel?' sel':'')+'" id="'+sid+'" onclick="toggleSel(\''+code.replace(/'/g,"\\'")+'\')">'+f.bandera+' '+code+'</div>';}});
+    h+='</div><button class="btn-primary" style="padding:.58rem;font-size:.88rem" onclick="publicarRepetidas()">PUBLICAR SELECCIONADAS</button>';
+  }
+  h+='</div>';
+  h+='<div class="filtros"><button class="filtro-btn'+(filtroActivo==='todos'?' active':'')+'" onclick="setFiltro(\'todos\')">Todos</button><button class="filtro-btn'+(filtroActivo==='cerca'?' active':'')+'" onclick="setFiltro(\'cerca\')">📍 Cerca</button><button class="filtro-btn'+(filtroActivo==='foil'?' active':'')+'" onclick="setFiltro(\'foil\')">⭐ Foils</button><button class="filtro-btn'+(filtroActivo==='sudamerica'?' active':'')+'" onclick="setFiltro(\'sudamerica\')">🌎 Sudamérica</button></div>';
+  var SUDAMERICA=['Argentina','Brasil','Colombia','Uruguay','Ecuador','Paraguay'];
+  var todos=_allPubs.slice();
+  if(publicaciones.length>0){var myReps=publicaciones.map(function(code){var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===code){f=allFigs[i];break;}}return f?{code:code,nom:f.nom,tipo:f.type,pais:f.pais}:{code:code,nom:code,tipo:'Base',pais:''};});todos.unshift({uid:'me',profile:{nombre:usuario.nombre+' (tú)',apellido:'',comuna:usuario.comuna,avatar:usuario.avatar,color:usuario.color},reps:myReps});}
+  if(filtroActivo==='cerca')todos=todos.filter(function(u){return getDistancia(usuario.comuna,(u.profile&&u.profile.comuna)||'')<=40;});
+  if(filtroActivo==='foil')todos=todos.filter(function(u){return u.reps.some(function(r){return r.tipo==='foil';});});
+  if(filtroActivo==='sudamerica')todos=todos.filter(function(u){return u.reps.some(function(r){return SUDAMERICA.indexOf(r.pais)>=0;});});
+  if(todos.length===0){h+='<div class="empty-state"><span class="empty-icon">🔍</span>No hay publicaciones con ese filtro</div>';return h;}
+  todos.forEach(function(u){
+    var p=u.profile||{};var comuna=p.comuna||'';
+    var dist=getDistancia(usuario.comuna,comuna);
+    var distStr=dist===0?'Tu misma zona':(dist<=20?dist+' km (cerca)':(dist<=60?dist+' km':comuna));
+    var esCerca=dist<=20;var esYo=u.uid==='me';
+    var fullName=(p.nombre||'')+(p.apellido&&!esYo?' '+p.apellido:'');
+    var safeId=(u.uid||'').replace(/'/g,"\\'");var safeName=fullName.replace(/'/g,"\\'");
+    h+='<div class="pub-card"><div class="pub-top"><div class="pub-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div><div class="pub-info"><div class="pub-usuario">'+fullName+'</div><div class="pub-lugar">📍 '+comuna+' &nbsp;<span class="dist-badge'+(esCerca?' cerca':'')+'">'+(esYo?'Tú':distStr)+'</span></div></div></div><div class="figs-pub">';
+    u.reps.forEach(function(r){var cls=r.tipo==='foil'?'fig-pill foil':'fig-pill';var icon=r.tipo==='foil'?'⭐':'';h+='<div class="'+cls+'">'+icon+' '+r.code+' '+r.nom+'</div>';});
+    h+='</div>';
+    if(!esYo){h+='<div class="pub-actions"><button class="btn-msg btn-msg-main" onclick="openChat(\''+safeId+'\',\''+safeName+'\')">💬 Mensaje</button><button class="btn-msg btn-msg-sec" onclick="openChat(\''+safeId+'\',\''+safeName+'\')">🔄 Proponer cambio</button></div>';}
+    else{h+='<div style="font-size:.73rem;color:var(--verde);font-weight:700;text-align:center;padding:.25rem">✓ Tu publicación — <a href="#" onclick="eliminarMisPublicaciones();return false;" style="color:var(--rojo)">Eliminar</a></div>';}
+    h+='</div>';
+  });
+  return h;
+}
+
+function toggleSel(code){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var el=document.getElementById(sid);var idx=selectedFigs.indexOf(code);if(idx>=0){selectedFigs.splice(idx,1);if(el)el.classList.remove('sel');}else{selectedFigs.push(code);if(el)el.classList.add('sel');}}
+function setFiltro(f){filtroActivo=f;switchTab('intercambios');}
+async function publicarRepetidas(){if(selectedFigs.length===0){showToast('Selecciona al menos una figurita');return;}var rows=selectedFigs.map(function(c){return{user_id:usuario.id,sticker_code:c};});var res=var insertRes = await sb.from('publicaciones').insert(rows);
+    if(insertRes.error && insertRes.error.code === '23505') {
+      // Already exists, that's fine
+    } else if(insertRes.error) {
+      showToast('Error: '+insertRes.error.message); return;
+    }if(res.error){showToast('Error: '+res.error.message);return;}selectedFigs.forEach(function(c){if(publicaciones.indexOf(c)<0)publicaciones.push(c);});selectedFigs=[];showToast('✓ '+publicaciones.length+' figurita(s) publicadas');switchTab('intercambios');}
+async function eliminarMisPublicaciones(){await sb.from('publicaciones').delete().eq('user_id',usuario.id);publicaciones=[];showToast('Publicaciones eliminadas');switchTab('intercambios');}
+
+/* ===== CHAT ===== */
+async function openChat(uid,nombre){_chatTarget={uid:uid,nombre:nombre};document.getElementById('chat-title').textContent='💬 '+nombre;document.getElementById('mensajes-list').innerHTML='<div style="text-align:center;padding:1rem;color:var(--txt2);font-size:.8rem">Cargando...</div>';document.getElementById('chat-overlay').classList.add('open');var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+usuario.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+usuario.id+')').order('hora',{ascending:true});renderMensajesDB(res.data||[]);setTimeout(function(){document.getElementById('chat-inp').focus();},100);}
+function renderMensajesDB(msgs){var list=document.getElementById('mensajes-list');if(!msgs.length){list.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--txt2);font-size:.82rem">¡Inicia la conversación! 👋</div>';return;}list.innerHTML=msgs.map(function(m){var esYo=m.de_user_id===usuario.id;var hora=new Date(m.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});return'<div class="msg '+(esYo?'yo':'otro')+'">'+m.texto+'<div class="msg-time">'+hora+'</div></div>';}).join('');list.scrollTop=list.scrollHeight;}
+function closeChat(){document.getElementById('chat-overlay').classList.remove('open');}
+async function sendMsg(){var inp=document.getElementById('chat-inp');var txt=inp.value.trim();if(!txt||!_chatTarget)return;inp.value='';var res=await sb.from('mensajes').insert({de_user_id:usuario.id,para_user_id:_chatTarget.uid,texto:txt,leido:false}).select();if(res.data&&res.data.length){var list=document.getElementById('mensajes-list');var hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+hora+'</div></div>';list.scrollTop=list.scrollHeight;}}
+
+/* ===== USUARIO ===== */
+function renderUsuario(){
+  var tengo=0,rep=0;var keys=Object.keys(coleccion);
+  for(var i=0;i<keys.length;i++){
+    if(coleccion[keys[i]]==='tengo'){tengo++;}
+    else if(coleccion[keys[i]]==='repetida'){tengo++;rep++;}
+  }
+  var total=SECCIONES.reduce(function(a,s){return a+s.figs.length;},0);var pct=total>0?Math.round((tengo/total)*100):0;
+  var dobStr='';if(usuario.dob){try{dobStr=new Date(usuario.dob+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});}catch(e){dobStr=usuario.dob;}}
+  var repFigs=Object.keys(coleccion).filter(function(c){return coleccion[c]==='repetida';}).map(function(c){var f=null;SECCIONES.forEach(function(s){s.figs.forEach(function(ff){if(ff.code===c)f={code:c,nom:ff.nom,tipo:ff.type,bandera:s.bandera};});});return f;}).filter(function(x){return x!==null;});
+  var h='<div class="perfil-header">'
+    +'<div class="perfil-avatar-big" style="background:'+(usuario.color||'#1a3a8a')+';color:#fff">'+(usuario.avatar||'?')+'</div>'
+    +'<div class="perfil-nombre">'+(usuario.nombre||'')+' '+(usuario.apellido||'')+'</div>'
+    +'<div class="perfil-lugar">📍 '+(usuario.comuna||'')+' — 5ª Región</div>'
+    +'<div class="perfil-dob">📅 '+dobStr+'</div>'
+    +'<div class="perfil-stats"><div class="p-stat"><div class="p-stat-n">'+tengo+'</div><div class="p-stat-l">Tengo</div></div><div class="p-stat"><div class="p-stat-n">'+publicaciones.length+'</div><div class="p-stat-l">Publicadas</div></div><div class="p-stat"><div class="p-stat-n">'+pct+'%</div><div class="p-stat-l">Completado</div></div></div></div>';
+  h+='<div class="section-card"><h3>🔁 MIS REPETIDAS ('+repFigs.length+')</h3>';
+  if(!repFigs.length){h+='<div style="font-size:.8rem;color:var(--txt2);text-align:center">Sin repetidas aún.</div>';}
+  else{h+='<div class="mis-rep-chips">';repFigs.forEach(function(f){var cls=f.tipo==='foil'?'rep-chip foil':'rep-chip';h+='<div class="'+cls+'">'+f.bandera+' '+f.code+'</div>';});h+='</div>';}
+  h+='</div>';
+  h+='<div class="section-card"><h3>📊 PROGRESO POR SELECCIÓN</h3>';
+  SECCIONES.filter(function(s){return s.figs.length>5;}).slice(0,14).forEach(function(s){var ten=s.figs.filter(function(f){return coleccion[f.code]==='tengo'||coleccion[f.code]==='repetida';}).length;var p=Math.round((ten/s.figs.length)*100);h+='<div class="prog-country"><div class="prog-country-top"><span>'+s.bandera+' '+s.nombre+'</span><span style="color:var(--verde)">'+ten+'/'+s.figs.length+'</span></div><div class="prog-bar-sm"><div class="prog-bar-sm-fill" style="width:'+p+'%"></div></div></div>';});
+  h+='</div><button class="btn-logout" onclick="logout()">Cerrar Sesión</button>';
+  return h;
+}
+
+async function logout(){await sb.auth.signOut();usuario=null;coleccion={};publicaciones=[];selectedFigs=[];searchQuery='';filtroActivo='todos';_allPubs=[];document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
+
+
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+// Close modal on overlay click
+document.addEventListener('click',function(e){
+  if(e.target.classList.contains('modal-overlay'))closeModal(e.target.id);
+});
+
+initApp();
+</script>
+
+<!-- PWA Install Banner -->
+<div id="install-banner" style="display:none;position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#1a3a8a;color:#fff;border-radius:14px;padding:.8rem 1.2rem;z-index:8888;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:340px;width:90%;align-items:center;gap:.8rem">
+  <div style="flex:1">
+    <div style="font-weight:800;font-size:.88rem">📲 Instalar MiALBUM 2026</div>
+    <div style="font-size:.72rem;opacity:.8;margin-top:.1rem">Agregar a pantalla de inicio</div>
+  </div>
+  <button onclick="installPWA()" style="background:var(--oro);color:#1a1a2e;border:none;border-radius:8px;padding:.45rem .9rem;font-weight:800;font-size:.8rem;cursor:pointer;white-space:nowrap;font-family:var(--ff)">Instalar</button>
+  <button onclick="document.getElementById('install-banner').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:1.1rem;cursor:pointer;padding:.2rem">✕</button>
+</div>
+<style>#install-banner{display:none!important}.install-show{display:flex!important}
+/* ===== MODALES LEGALES ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:20px;width:100%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.modal-header{padding:1.1rem 1.2rem .8rem;border-bottom:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-header h3{font-weight:800;font-size:1rem;color:var(--azul)}
+.modal-body{overflow-y:auto;padding:1rem 1.2rem;flex:1;font-size:.8rem;color:var(--txt);line-height:1.7}
+.modal-body h4{font-weight:800;color:var(--azul);margin:1rem 0 .3rem;font-size:.85rem}
+.modal-body p{margin-bottom:.6rem}
+.modal-body ul{padding-left:1.2rem;margin-bottom:.6rem}
+.modal-body ul li{margin-bottom:.3rem}
+.modal-footer{padding:.8rem 1.2rem 1rem;border-top:1px solid var(--borde);flex-shrink:0}
+.modal-footer .btn-primary{margin-top:0}
+/* Checkbox TyC */
+.tyc-check-wrap{display:flex;align-items:flex-start;gap:.6rem;margin:.6rem 0 .2rem;cursor:pointer}
+.tyc-check-wrap input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--azul)}
+.tyc-check-wrap label{font-size:.75rem;color:var(--txt2);cursor:pointer;line-height:1.4}
+.tyc-check-wrap label a{color:var(--azul);font-weight:700;text-decoration:underline;cursor:pointer}
+.tyc-error{font-size:.72rem;color:var(--rojo);font-weight:700;display:none;margin-top:.2rem}
+.tyc-error.show{display:block}
+</style>
+
+<script>
+var _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredPrompt = e;
+  var banner = document.getElementById('install-banner');
+  banner.style.setProperty('display','flex','important');
+});
+function installPWA() {
+  if (_deferredPrompt) {
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(function(r) {
+      _deferredPrompt = null;
+      document.getElementById('install-banner').style.display = 'none';
+      if (r.outcome === 'accepted') showToast('✅ App instalada!');
+    });
+  }
+}
+window.addEventListener('appinstalled', function() {
+  showToast('✅ MiALBUM 2026 instalada!');
+});
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+
+
+<!-- MODAL TÉRMINOS Y CONDICIONES -->
+<div class="modal-overlay" id="modal-tyc">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📋 Términos y Condiciones</h3>
+      <button class="btn-close" onclick="closeModal('modal-tyc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>Última actualización:</strong> Mayo 2026</p>
+      <p>Bienvenido a <strong>MiALBUM 2026</strong> ("la Aplicación"), una plataforma digital para que coleccionistas de la 5ª Región de Valparaíso, Chile, puedan registrar su colección de láminas del FIFA World Cup 2026 y conectarse para realizar intercambios entre sí.</p>
+
+      <h4>1. ACEPTACIÓN DE LOS TÉRMINOS</h4>
+      <p>Al registrarte y usar MiALBUM 2026, aceptas estos Términos y Condiciones en su totalidad. Si no estás de acuerdo, no debes usar la Aplicación.</p>
+
+      <h4>2. NATURALEZA DEL SERVICIO</h4>
+      <p>MiALBUM 2026 es únicamente una <strong>plataforma de intermediación</strong>. La Aplicación facilita el contacto entre usuarios que deseen intercambiar láminas, pero:</p>
+      <ul>
+        <li>No es parte de ningún acuerdo de intercambio entre usuarios.</li>
+        <li>No garantiza que los intercambios se realicen de forma satisfactoria.</li>
+        <li>No verifica la identidad real de los usuarios más allá del email registrado.</li>
+        <li>No tiene relación comercial ni afiliación con Panini S.p.A. ni con FIFA.</li>
+      </ul>
+
+      <h4>3. RESPONSABILIDAD EN INTERCAMBIOS</h4>
+      <p>Los intercambios de láminas son acuerdos <strong>exclusivamente entre los usuarios</strong> involucrados. MiALBUM 2026 no se hace responsable por:</p>
+      <ul>
+        <li>Pérdidas, robos, estafas o cualquier perjuicio derivado de un intercambio.</li>
+        <li>El incumplimiento de acuerdos entre usuarios.</li>
+        <li>Daños físicos, materiales o morales ocurridos durante encuentros entre usuarios.</li>
+        <li>La veracidad de la información publicada por los usuarios.</li>
+      </ul>
+      <p>Se recomienda encarecidamente realizar los intercambios en <strong>lugares públicos y seguros</strong>, y preferiblemente acompañado.</p>
+
+      <h4>4. MENORES DE EDAD</h4>
+      <p>Si eres menor de 18 años, debes contar con la autorización de tu padre, madre o tutor legal para usar esta Aplicación. Al registrarte, declaras tener al menos 13 años de edad. Los menores de 13 años no pueden usar la plataforma.</p>
+
+      <h4>5. CONDUCTA DEL USUARIO</h4>
+      <p>Al usar la Aplicación, te comprometes a:</p>
+      <ul>
+        <li>No publicar información falsa o engañosa.</li>
+        <li>No acosar, amenazar ni discriminar a otros usuarios.</li>
+        <li>No usar la plataforma para actividades ilegales.</li>
+        <li>Tratar a otros usuarios con respeto.</li>
+      </ul>
+      <p>MiALBUM 2026 se reserva el derecho de suspender o eliminar cuentas que violen estas normas.</p>
+
+      <h4>6. PROPIEDAD INTELECTUAL</h4>
+      <p>MiALBUM 2026 no tiene afiliación con Panini S.p.A. ni con FIFA. Los nombres y códigos de láminas son usados únicamente con fines referenciales para facilitar la identificación de las figuritas por los coleccionistas.</p>
+
+      <h4>7. LIMITACIÓN DE RESPONSABILIDAD</h4>
+      <p>En la máxima medida permitida por la legislación chilena (Ley N° 19.496 sobre Protección de los Derechos de los Consumidores), MiALBUM 2026 no será responsable por daños directos, indirectos, incidentales o consecuentes derivados del uso o imposibilidad de uso de la Aplicación.</p>
+
+      <h4>8. MODIFICACIONES</h4>
+      <p>Nos reservamos el derecho de modificar estos Términos en cualquier momento. Los cambios serán notificados a través de la Aplicación. El uso continuado implica aceptación de los nuevos términos.</p>
+
+      <h4>9. LEY APLICABLE</h4>
+      <p>Estos Términos se rigen por las leyes de la República de Chile. Cualquier disputa será sometida a los tribunales competentes de la ciudad de Valparaíso.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('modal-tyc')">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL POLÍTICA DE PRIVACIDAD -->
+<div class="modal-overlay" id="modal-privacidad">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>🔒 Política de Privacidad</h3>
+      <button class="btn-close" onclick="closeModal('modal-privacidad')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>Última actualización:</strong> Mayo 2026</p>
+      <p>En MiALBUM 2026 respetamos tu privacidad y nos comprometemos a proteger tus datos personales de acuerdo a la <strong>Ley N° 19.628 sobre Protección de la Vida Privada</strong> de Chile.</p>
+
+      <h4>1. DATOS QUE RECOPILAMOS</h4>
+      <ul>
+        <li><strong>Email:</strong> Para autenticación y comunicaciones de la plataforma.</li>
+        <li><strong>Nombre y apellido:</strong> Para identificarte ante otros usuarios.</li>
+        <li><strong>Fecha de nacimiento:</strong> Para verificar requisitos de edad.</li>
+        <li><strong>Comuna:</strong> Para mostrar distancia aproximada entre usuarios en intercambios.</li>
+        <li><strong>Colección:</strong> Las láminas que marcas como "tengo" o "repetida".</li>
+        <li><strong>Mensajes:</strong> Los mensajes enviados entre usuarios dentro de la app.</li>
+      </ul>
+
+      <h4>2. CÓMO USAMOS TUS DATOS</h4>
+      <ul>
+        <li>Gestionar tu cuenta y sesión.</li>
+        <li>Mostrar tu perfil (nombre, comuna, avatar) a otros usuarios para facilitar intercambios.</li>
+        <li>Enviarte emails transaccionales (confirmación de cuenta, recuperación de contraseña).</li>
+        <li>Mejorar el funcionamiento de la plataforma.</li>
+      </ul>
+      <p>No vendemos ni compartimos tus datos con terceros para fines comerciales.</p>
+
+      <h4>3. ALMACENAMIENTO</h4>
+      <p>Tus datos se almacenan en <strong>Supabase</strong> (infraestructura en la nube con servidores en la Unión Europea), que cumple con estándares internacionales de seguridad (SOC 2 Type II).</p>
+
+      <h4>4. DATOS VISIBLES A OTROS USUARIOS</h4>
+      <p>Al publicar repetidas en Intercambios, los siguientes datos son visibles para todos los usuarios:</p>
+      <ul>
+        <li>Tu nombre y apellido</li>
+        <li>Tu comuna</li>
+        <li>Las láminas que publicas como repetidas</li>
+      </ul>
+
+      <h4>5. TUS DERECHOS</h4>
+      <p>Tienes derecho a:</p>
+      <ul>
+        <li><strong>Acceder</strong> a tus datos personales.</li>
+        <li><strong>Rectificar</strong> datos incorrectos.</li>
+        <li><strong>Eliminar</strong> tu cuenta y todos tus datos.</li>
+        <li><strong>Oponerte</strong> al tratamiento de tus datos.</li>
+      </ul>
+      <p>Para ejercer estos derechos, contáctanos a través de la app.</p>
+
+      <h4>6. COOKIES Y ALMACENAMIENTO LOCAL</h4>
+      <p>La Aplicación usa el almacenamiento local del navegador únicamente para mantener tu sesión activa. No usamos cookies de seguimiento ni publicidad de terceros en este momento.</p>
+
+      <h4>7. MENORES</h4>
+      <p>No recopilamos intencionalmente datos de menores de 13 años. Si detectamos una cuenta de un menor sin autorización parental, la eliminaremos.</p>
+
+      <h4>8. CONTACTO</h4>
+      <p>Para consultas sobre privacidad o solicitudes de eliminación de datos, contáctanos a través de los canales disponibles en la Aplicación.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('modal-privacidad')">Entendido</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
