@@ -292,6 +292,44 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .tyc-check-wrap label a{color:var(--azul);font-weight:700;text-decoration:underline;cursor:pointer}
 .tyc-error{font-size:.72rem;color:var(--rojo);font-weight:700;display:none;margin-top:.2rem}
 .tyc-error.show{display:block}
+
+.tab{position:relative}
+.tab-badge{
+  position:absolute;top:4px;right:6px;
+  background:var(--rojo);color:#fff;
+  border-radius:10px;font-size:.55rem;font-weight:800;
+  padding:.1rem .35rem;min-width:14px;text-align:center;line-height:1.4;
+}
+/* Mensajes */
+.conv-list{display:flex;flex-direction:column;gap:.5rem}
+.conv-item{
+  background:var(--card);border-radius:14px;padding:.9rem;
+  border:1.5px solid var(--borde);cursor:pointer;
+  display:flex;align-items:center;gap:.75rem;
+  transition:border-color .2s,box-shadow .2s;
+}
+.conv-item:hover{border-color:#a0b0d0;box-shadow:0 3px 12px rgba(0,0,0,.07)}
+.conv-item.unread{border-color:var(--azul);background:#f5f8ff}
+.conv-avatar{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:1rem;color:#fff;flex-shrink:0;
+}
+.conv-info{flex:1;min-width:0}
+.conv-nombre{font-weight:800;font-size:.9rem;color:var(--txt)}
+.conv-ultimo{font-size:.75rem;color:var(--txt2);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-item.unread .conv-ultimo{color:var(--azul);font-weight:700}
+.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;flex-shrink:0}
+.conv-hora{font-size:.65rem;color:var(--txt2)}
+.conv-unread-badge{
+  background:var(--azul);color:#fff;border-radius:10px;
+  font-size:.65rem;font-weight:800;padding:.15rem .45rem;
+  min-width:18px;text-align:center;
+}
+.msg-empty{text-align:center;padding:3rem 1rem;color:var(--txt2)}
+.msg-empty-icon{font-size:3rem;display:block;margin-bottom:.8rem}
+.msg-empty h3{font-weight:800;font-size:1rem;color:var(--txt);margin-bottom:.4rem}
+.msg-empty p{font-size:.82rem;line-height:1.5}
 </style>
 </head>
 <body>
@@ -365,9 +403,10 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
       </div>
     </div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('coleccion')" id="tab-coleccion"><span class="tab-icon">📚</span>Mi Colección</button>
+      <button class="tab active" onclick="switchTab('coleccion')" id="tab-coleccion"><span class="tab-icon">📚</span>Colección</button>
       <button class="tab" onclick="switchTab('intercambios')" id="tab-intercambios"><span class="tab-icon">🔄</span>Intercambios</button>
-      <button class="tab" onclick="switchTab('usuario')" id="tab-usuario"><span class="tab-icon">👤</span>Mi Usuario</button>
+      <button class="tab" onclick="switchTab('mensajes')" id="tab-mensajes"><span class="tab-icon">💬</span>Mensajes<span class="tab-badge" id="badge-mensajes" style="display:none"></span></button>
+      <button class="tab" onclick="switchTab('usuario')" id="tab-usuario"><span class="tab-icon">👤</span>Usuario</button>
     </div>
   </div>
   <div class="content" id="main-content"></div>
@@ -505,6 +544,9 @@ async function loadUserAndEnter(authUser){
   av.textContent=usuario.avatar||'?';av.style.background=usuario.color||'#1a3a8a';av.style.color='#fff';
   document.getElementById('hdr-name').textContent=usuario.nombre||'';
   switchTab('coleccion');
+  // Check for unread messages every 30 seconds
+  checkUnreadMessages();
+  setInterval(function(){ if(usuario) checkUnreadMessages(); }, 30000);
 }
 
 async function initApp(){
@@ -542,6 +584,7 @@ function switchTab(tab){
   var c=document.getElementById('main-content');
   if(tab==='coleccion')c.innerHTML=renderColeccion();
   else if(tab==='intercambios'){c.innerHTML='<div class="empty-state"><span class="empty-icon">⏳</span>Cargando...</div>';loadIntercambios();}
+  else if(tab==='mensajes'){c.innerHTML='<div class="empty-state"><span class="empty-icon">⏳</span>Cargando mensajes...</div>';loadMensajesTab();}
   else c.innerHTML=renderUsuario();
 }
 
@@ -775,7 +818,19 @@ async function eliminarMisPublicaciones(){await sb.from('publicaciones').delete(
 async function openChat(uid,nombre){_chatTarget={uid:uid,nombre:nombre};document.getElementById('chat-title').textContent='💬 '+nombre;document.getElementById('mensajes-list').innerHTML='<div style="text-align:center;padding:1rem;color:var(--txt2);font-size:.8rem">Cargando...</div>';document.getElementById('chat-overlay').classList.add('open');var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+usuario.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+usuario.id+')').order('hora',{ascending:true});renderMensajesDB(res.data||[]);setTimeout(function(){document.getElementById('chat-inp').focus();},100);}
 function renderMensajesDB(msgs){var list=document.getElementById('mensajes-list');if(!msgs.length){list.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--txt2);font-size:.82rem">¡Inicia la conversación! 👋</div>';return;}list.innerHTML=msgs.map(function(m){var esYo=m.de_user_id===usuario.id;var hora=new Date(m.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});return'<div class="msg '+(esYo?'yo':'otro')+'">'+m.texto+'<div class="msg-time">'+hora+'</div></div>';}).join('');list.scrollTop=list.scrollHeight;}
 function closeChat(){document.getElementById('chat-overlay').classList.remove('open');}
-async function sendMsg(){var inp=document.getElementById('chat-inp');var txt=inp.value.trim();if(!txt||!_chatTarget)return;inp.value='';var res=await sb.from('mensajes').insert({de_user_id:usuario.id,para_user_id:_chatTarget.uid,texto:txt,leido:false}).select();if(res.data&&res.data.length){var list=document.getElementById('mensajes-list');var hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+hora+'</div></div>';list.scrollTop=list.scrollHeight;}}
+async function sendMsg(){
+  var inp=document.getElementById('chat-inp');
+  var txt=inp.value.trim();
+  if(!txt||!_chatTarget)return;
+  inp.value='';
+  var res=await sb.from('mensajes').insert({de_user_id:usuario.id,para_user_id:_chatTarget.uid,texto:txt,leido:false}).select();
+  if(res.data&&res.data.length){
+    var list=document.getElementById('mensajes-list');
+    var hora=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+hora+'</div></div>';
+    list.scrollTop=list.scrollHeight;
+  }
+}
 
 /* ===== USUARIO ===== */
 function renderUsuario(){
@@ -823,6 +878,138 @@ var _lmTimer=setInterval(function(){
   if(_lmi>=_lmsgs.length)clearInterval(_lmTimer);
 },1800);
 
+
+/* ===== MENSAJES TAB ===== */
+var _conversaciones = [];
+
+async function loadMensajesTab() {
+  // Load all messages where user is sender or receiver
+  var res = await sb.from('mensajes')
+    .select('*')
+    .or('de_user_id.eq.'+usuario.id+',para_user_id.eq.'+usuario.id)
+    .order('hora', {ascending:false});
+
+  if(res.error){
+    document.getElementById('main-content').innerHTML='<div class="empty-state"><span class="empty-icon">⚠️</span>Error cargando mensajes</div>';
+    return;
+  }
+
+  var msgs = res.data || [];
+
+  // Group by conversation partner
+  var convMap = {};
+  msgs.forEach(function(m){
+    var partnerId = m.de_user_id === usuario.id ? m.para_user_id : m.de_user_id;
+    if(!convMap[partnerId]){
+      convMap[partnerId] = {partnerId:partnerId, msgs:[], unread:0};
+    }
+    convMap[partnerId].msgs.push(m);
+    // Count unread: messages FROM partner that we haven't read
+    if(m.de_user_id !== usuario.id && !m.leido){
+      convMap[partnerId].unread++;
+    }
+  });
+
+  var partnerIds = Object.keys(convMap);
+  if(partnerIds.length === 0){
+    document.getElementById('main-content').innerHTML = renderMensajesVacio();
+    return;
+  }
+
+  // Load partner profiles
+  var profRes = await sb.from('profiles')
+    .select('id,nombre,apellido,avatar,color,comuna')
+    .in('id', partnerIds);
+
+  var profiles = {};
+  if(profRes.data){
+    profRes.data.forEach(function(p){ profiles[p.id] = p; });
+  }
+
+  _conversaciones = partnerIds.map(function(pid){
+    return { partnerId:pid, profile:profiles[pid]||{}, msgs:convMap[pid].msgs, unread:convMap[pid].unread };
+  });
+
+  // Mark messages as read
+  if(partnerIds.length > 0){
+    await sb.from('mensajes')
+      .update({leido:true})
+      .eq('para_user_id', usuario.id)
+      .eq('leido', false);
+  }
+
+  updateMensajesBadge(0);
+  document.getElementById('main-content').innerHTML = renderMensajesTab();
+}
+
+function renderMensajesVacio(){
+  return '<div class="msg-empty">'
+    +'<span class="msg-empty-icon">💬</span>'
+    +'<h3>Sin mensajes aún</h3>'
+    +'<p>Cuando contactes a alguien en<br>Intercambios, los mensajes aparecerán aquí.</p>'
+    +'</div>';
+}
+
+function renderMensajesTab(){
+  if(!_conversaciones.length) return renderMensajesVacio();
+
+  var h = '<div style="margin-bottom:.8rem"><strong style="font-size:.9rem;font-weight:800;color:var(--txt)">Conversaciones ('+_conversaciones.length+')</strong></div>';
+  h += '<div class="conv-list">';
+
+  _conversaciones.forEach(function(conv){
+    var p = conv.profile || {};
+    var nombre = (p.nombre||'?')+' '+(p.apellido||'');
+    var ultimoMsg = conv.msgs[0];
+    var esYo = ultimoMsg && ultimoMsg.de_user_id === usuario.id;
+    var textoUltimo = ultimoMsg ? (esYo?'Tú: ':'')+ultimoMsg.texto : '';
+    if(textoUltimo.length > 45) textoUltimo = textoUltimo.slice(0,45)+'...';
+    var hora = ultimoMsg ? new Date(ultimoMsg.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) : '';
+    var safeName = nombre.replace(/'/g,"\'");
+    var safeId = conv.partnerId.replace(/'/g,"\'");
+
+    h += '<div class="conv-item'+(conv.unread>0?' unread':'')+'" onclick="openChatFromMensajes(''+safeId+'',''+safeName+'')">'
+      +'<div class="conv-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div>'
+      +'<div class="conv-info">'
+      +'<div class="conv-nombre">'+nombre+'</div>'
+      +'<div class="conv-lugar" style="font-size:.7rem;color:var(--txt2)">📍 '+(p.comuna||'')+'</div>'
+      +'<div class="conv-ultimo">'+textoUltimo+'</div>'
+      +'</div>'
+      +'<div class="conv-meta">'
+      +'<div class="conv-hora">'+hora+'</div>'
+      +(conv.unread>0?'<div class="conv-unread-badge">'+conv.unread+'</div>':'')
+      +'</div>'
+      +'</div>';
+  });
+
+  h += '</div>';
+  return h;
+}
+
+function openChatFromMensajes(uid, nombre){
+  openChat(uid, nombre);
+}
+
+async function updateMensajesBadge(count){
+  var badge = document.getElementById('badge-mensajes');
+  if(!badge) return;
+  if(count > 0){
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function checkUnreadMessages(){
+  if(!usuario) return;
+  var res = await sb.from('mensajes')
+    .select('id', {count:'exact'})
+    .eq('para_user_id', usuario.id)
+    .eq('leido', false);
+  var count = res.count || 0;
+  updateMensajesBadge(count);
+}
+
 initApp();
 </script>
 
@@ -856,6 +1043,44 @@ initApp();
 .tyc-check-wrap label a{color:var(--azul);font-weight:700;text-decoration:underline;cursor:pointer}
 .tyc-error{font-size:.72rem;color:var(--rojo);font-weight:700;display:none;margin-top:.2rem}
 .tyc-error.show{display:block}
+
+.tab{position:relative}
+.tab-badge{
+  position:absolute;top:4px;right:6px;
+  background:var(--rojo);color:#fff;
+  border-radius:10px;font-size:.55rem;font-weight:800;
+  padding:.1rem .35rem;min-width:14px;text-align:center;line-height:1.4;
+}
+/* Mensajes */
+.conv-list{display:flex;flex-direction:column;gap:.5rem}
+.conv-item{
+  background:var(--card);border-radius:14px;padding:.9rem;
+  border:1.5px solid var(--borde);cursor:pointer;
+  display:flex;align-items:center;gap:.75rem;
+  transition:border-color .2s,box-shadow .2s;
+}
+.conv-item:hover{border-color:#a0b0d0;box-shadow:0 3px 12px rgba(0,0,0,.07)}
+.conv-item.unread{border-color:var(--azul);background:#f5f8ff}
+.conv-avatar{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:1rem;color:#fff;flex-shrink:0;
+}
+.conv-info{flex:1;min-width:0}
+.conv-nombre{font-weight:800;font-size:.9rem;color:var(--txt)}
+.conv-ultimo{font-size:.75rem;color:var(--txt2);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-item.unread .conv-ultimo{color:var(--azul);font-weight:700}
+.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;flex-shrink:0}
+.conv-hora{font-size:.65rem;color:var(--txt2)}
+.conv-unread-badge{
+  background:var(--azul);color:#fff;border-radius:10px;
+  font-size:.65rem;font-weight:800;padding:.15rem .45rem;
+  min-width:18px;text-align:center;
+}
+.msg-empty{text-align:center;padding:3rem 1rem;color:var(--txt2)}
+.msg-empty-icon{font-size:3rem;display:block;margin-bottom:.8rem}
+.msg-empty h3{font-weight:800;font-size:1rem;color:var(--txt);margin-bottom:.4rem}
+.msg-empty p{font-size:.82rem;line-height:1.5}
 </style>
 
 <script>
