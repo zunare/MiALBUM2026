@@ -295,7 +295,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 </style>
 </head>
 <body>
-<div id="loading-screen"><div class="loading-logo">MiALBUM ⚽ 2026</div><div class="loading-sub">Quinta Región</div><div class="spinner"></div></div>
+<div id="loading-screen"><div class="loading-logo">MiALBUM ⚽ 2026</div><div class="loading-sub">Quinta Región</div><div class="spinner"></div><div id="loading-msg" style="color:rgba(255,255,255,.4);font-size:.72rem;margin-top:1.2rem;font-family:var(--ff)">Conectando...</div></div>
 
 <div id="login-screen">
   <div class="login-logo">MiALBUM ⚽ 2026</div>
@@ -508,13 +508,31 @@ async function loadUserAndEnter(authUser){
 }
 
 async function initApp(){
-  try{
-    var sessRes=await sb.auth.getSession();
-    var sess=sessRes.data&&sessRes.data.session;
+  // Timeout de seguridad: si Supabase no responde en 6 segundos, mostrar login igual
+  var safetyTimer = setTimeout(function(){
     document.getElementById('loading-screen').style.display='none';
-    if(sess&&sess.user){document.getElementById('login-screen').style.display='none';await loadUserAndEnter(sess.user);}
-    else{document.getElementById('login-screen').style.display='flex';}
-  }catch(e){document.getElementById('loading-screen').style.display='none';document.getElementById('login-screen').style.display='flex';}
+    document.getElementById('login-screen').style.display='flex';
+  }, 6000);
+
+  try{
+    var sessRes = await Promise.race([
+      sb.auth.getSession(),
+      new Promise(function(_, reject){ setTimeout(function(){ reject(new Error('timeout')); }, 5000); })
+    ]);
+    clearTimeout(safetyTimer);
+    var sess = sessRes.data && sessRes.data.session;
+    document.getElementById('loading-screen').style.display='none';
+    if(sess && sess.user){
+      document.getElementById('login-screen').style.display='none';
+      await loadUserAndEnter(sess.user);
+    } else {
+      document.getElementById('login-screen').style.display='flex';
+    }
+  } catch(e){
+    clearTimeout(safetyTimer);
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+  }
 }
 
 function switchTab(tab){
@@ -786,6 +804,16 @@ function closeModal(id){document.getElementById(id).classList.remove('open');doc
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay'))closeModal(e.target.id);
 });
+
+// Loading messages
+var _lmsgs=['Conectando...','Cargando tu álbum...','Casi listo...'];
+var _lmi=0;
+var _lmTimer=setInterval(function(){
+  _lmi++;
+  var el=document.getElementById('loading-msg');
+  if(el&&_lmi<_lmsgs.length)el.textContent=_lmsgs[_lmi];
+  if(_lmi>=_lmsgs.length)clearInterval(_lmTimer);
+},1800);
 
 initApp();
 </script>
