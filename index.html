@@ -755,12 +755,20 @@ function renderIntercambiosHTML(allFigs){
 
 function toggleSel(code){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var el=document.getElementById(sid);var idx=selectedFigs.indexOf(code);if(idx>=0){selectedFigs.splice(idx,1);if(el)el.classList.remove('sel');}else{selectedFigs.push(code);if(el)el.classList.add('sel');}}
 function setFiltro(f){filtroActivo=f;switchTab('intercambios');}
-async function publicarRepetidas(){if(selectedFigs.length===0){showToast('Selecciona al menos una figurita');return;}var rows=selectedFigs.map(function(c){return{user_id:usuario.id,sticker_code:c};});var res=var insertRes = await sb.from('publicaciones').insert(rows);
-    if(insertRes.error && insertRes.error.code === '23505') {
-      // Already exists, that's fine
-    } else if(insertRes.error) {
-      showToast('Error: '+insertRes.error.message); return;
-    }if(res.error){showToast('Error: '+res.error.message);return;}selectedFigs.forEach(function(c){if(publicaciones.indexOf(c)<0)publicaciones.push(c);});selectedFigs=[];showToast('✓ '+publicaciones.length+' figurita(s) publicadas');switchTab('intercambios');}
+async function publicarRepetidas(){
+  if(selectedFigs.length===0){showToast('Selecciona al menos una figurita');return;}
+  var rows=selectedFigs.map(function(c){return{user_id:usuario.id,sticker_code:c};});
+  for(var i=0;i<rows.length;i++){
+    var r=await sb.from('publicaciones').insert(rows[i]);
+    if(r.error&&r.error.code!=='23505'&&r.error.code!=='23P01'){
+      // ignore duplicate errors, show others
+    }
+  }
+  selectedFigs.forEach(function(c){if(publicaciones.indexOf(c)<0)publicaciones.push(c);});
+  selectedFigs=[];
+  showToast('✓ '+publicaciones.length+' figurita(s) publicadas');
+  switchTab('intercambios');
+}
 async function eliminarMisPublicaciones(){await sb.from('publicaciones').delete().eq('user_id',usuario.id);publicaciones=[];showToast('Publicaciones eliminadas');switchTab('intercambios');}
 
 /* ===== CHAT ===== */
