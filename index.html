@@ -330,6 +330,14 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .msg-empty-icon{font-size:3rem;display:block;margin-bottom:.8rem}
 .msg-empty h3{font-weight:800;font-size:1rem;color:var(--txt);margin-bottom:.4rem}
 .msg-empty p{font-size:.82rem;line-height:1.5}
+
+.grupo-header{
+  font-weight:800;font-size:1.1rem;color:#fff;
+  background:linear-gradient(135deg,var(--azul),#2a5fd4);
+  border-radius:10px;padding:.5rem 1rem;margin:1.2rem 0 .5rem;
+  letter-spacing:2px;display:flex;align-items:center;gap:.5rem;
+}
+.grupo-header::before{content:'⚽';font-size:.9rem;}
 </style>
 </head>
 <body>
@@ -624,32 +632,96 @@ function renderColeccion(){
     +'<input class="buscar-input" id="buscar-inp" placeholder="Buscar jugador o código..." value="'+searchQuery.replace(/"/g,'&quot;')+'" oninput="onSearch(this.value)">'
     +'</div>';
   var q=searchQuery.toLowerCase();
-  SECCIONES.forEach(function(sec){
-    var figsVis=q?sec.figs.filter(function(f){return f.nom.toLowerCase().indexOf(q)>=0||f.code.toLowerCase().indexOf(q)>=0||sec.nombre.toLowerCase().indexOf(q)>=0;}):sec.figs;
-    if(!figsVis.length)return;
+
+  // Map sections by ID for quick lookup
+  var secMap={};
+  SECCIONES.forEach(function(s){secMap[s.id.toUpperCase()]=s;});
+
+  // World Cup 2026 groups (48 teams / 12 groups of 4)
+  var GRUPO_ORDER=[
+    {label:'🌍 Presentación', ids:['FWC','CC']},
+    {label:'Grupo A', ids:['MEX','RSA','KOR','CZE']},
+    {label:'Grupo B', ids:['CAN','BIH','QAT','SUI']},
+    {label:'Grupo C', ids:['BRA','MAR','HAI','SCO']},
+    {label:'Grupo D', ids:['USA','PAR','AUS','TUR']},
+    {label:'Grupo E', ids:['GER','CUW','CIV','ECU']},
+    {label:'Grupo F', ids:['NED','JPN','SWE','TUN']},
+    {label:'Grupo G', ids:['BEL','EGY','IRN','NZL']},
+    {label:'Grupo H', ids:['ESP','CPV','KSA','URU']},
+    {label:'Grupo I', ids:['FRA','SEN','IRQ','NOR']},
+    {label:'Grupo J', ids:['ARG','ALG','AUT','JOR']},
+    {label:'Grupo K', ids:['POR','COD','UZB','COL']},
+    {label:'Grupo L', ids:['ENG','CRO','GHA','PAN']},
+  ];
+
+  function renderSec(sec){
+    if(!sec)return '';
+    var figsVis=q?sec.figs.filter(function(f){
+      return f.nom.toLowerCase().indexOf(q)>=0||f.code.toLowerCase().indexOf(q)>=0||sec.nombre.toLowerCase().indexOf(q)>=0;
+    }):sec.figs;
+    if(!figsVis.length)return '';
     var secTengo=sec.figs.filter(function(f){return coleccion[f.code]==='tengo'||coleccion[f.code]==='repetida';}).length;
-    h+='<div class="seccion-titulo"><div class="sec-left"><span>'+sec.bandera+'</span>'+sec.nombre+'</div>'
-      +'<span class="sec-progress">'+secTengo+'/'+sec.figs.length+'</span></div><div class="fig-grid">';
+    var out='<div class="seccion-titulo"><div class="sec-left"><span>'+sec.bandera+'</span>'+sec.nombre+'</div>'
+      +'<span class="sec-progress" data-secid="'+sec.id+'">'+secTengo+'/'+sec.figs.length+'</span></div>'
+      +'<div class="fig-grid">';
     figsVis.forEach(function(f){
       var estado=coleccion[f.code]||'';
-      var sc=f.code.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      var sn=f.nom.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      var sky=sec.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      h+='<div class="'+getFigClass(f,estado)+'" onclick="openFigPanel(\''+sc+'\',\''+sn+'\',\''+sky+'\',\''+f.type+'\')">'
+      out+='<div class="'+getFigClass(f,estado)+'" data-code="'+f.code+'" onclick="openFigPanel(this)">'
         +'<div class="fig-inner">'
         +'<div class="fig-code">'+f.code+'</div>'
         +'<div class="fig-nombre">'+f.nom+'</div>'
         +'</div></div>';
     });
-    h+='</div>';
-  });
+    out+='</div>';
+    return out;
+  }
+    if(q){
+    // Search mode: show all matching sections without group headers
+    SECCIONES.forEach(function(sec){ h+=renderSec(sec); });
+  } else {
+    // Normal mode: show by groups A-L
+    GRUPO_ORDER.forEach(function(grupo){
+      var grupoHTML='';
+      grupo.ids.forEach(function(id){ var sec=secMap[id]; if(sec) grupoHTML+=renderSec(sec); });
+      if(grupoHTML){
+        if(grupo.label.indexOf('Grupo')>=0){
+          h+='<div style="margin:1.2rem 0 .4rem;padding:.45rem .9rem;background:linear-gradient(135deg,#0a1628,#1a3a8a);border-radius:10px;color:#fff;font-weight:800;font-size:.88rem;letter-spacing:.5px">'+grupo.label+'</div>';
+        }
+        h+=grupoHTML;
+      }
+    });
+    // Show any section not in any group
+    var allGroupIds={};
+    GRUPO_ORDER.forEach(function(g){g.ids.forEach(function(id){allGroupIds[id]=true;});});
+    var extras=SECCIONES.filter(function(s){return !allGroupIds[s.id.toUpperCase()];});
+    if(extras.length){
+      h+='<div style="margin:1.2rem 0 .4rem;padding:.45rem .9rem;background:linear-gradient(135deg,#0a1628,#1a3a8a);border-radius:10px;color:#fff;font-weight:800;font-size:.88rem;letter-spacing:.5px">Otras selecciones</div>';
+      extras.forEach(function(sec){ h+=renderSec(sec); });
+    }
+  }
+
   return h;
 }
 
 function onSearch(v){searchQuery=v;document.getElementById('main-content').innerHTML=renderColeccion();var el=document.getElementById('buscar-inp');if(el){el.focus();el.setSelectionRange(v.length,v.length);}}
 
 /* Panel inferior para marcar figuritas */
-function openFigPanel(code,nom,country,type){
+function openFigPanel(el){
+  var code=el.dataset.code;
+  var fig=null,country='',type='Base',nom='';
+  for(var i=0;i<SECCIONES.length;i++){
+    for(var j=0;j<SECCIONES[i].figs.length;j++){
+      if(SECCIONES[i].figs[j].code===code){
+        fig=SECCIONES[i].figs[j];
+        country=SECCIONES[i].nombre;
+        type=fig.type;
+        nom=fig.nom;
+        break;
+      }
+    }
+    if(fig)break;
+  }
+  if(!fig)return;
   ttFigData={code:code,nom:nom,country:country,type:type};
   document.getElementById('fp-code').textContent=code;
   document.getElementById('fp-name').textContent=nom;
@@ -742,6 +814,8 @@ function updateStats(){
   }
   var total=SECCIONES.reduce(function(a,s){return a+s.figs.length;},0);
   var pct=total>0?Math.round((tengo/total)*100):0;
+
+  // Update top stats
   var statNums=document.querySelectorAll('.stat-num');
   if(statNums[1])statNums[1].textContent=tengo;
   if(statNums[2])statNums[2].textContent=rep;
@@ -749,6 +823,27 @@ function updateStats(){
   if(bar)bar.style.width=pct+'%';
   var ptxt=document.querySelector('.progress-txt');
   if(ptxt)ptxt.textContent=pct+'% completado — '+(total-tengo)+' figuritas restantes';
+
+  // Update section counter for the sticker that was just changed
+  if(ttFigData){
+    var sec=null;
+    for(var i=0;i<SECCIONES.length;i++){
+      for(var j=0;j<SECCIONES[i].figs.length;j++){
+        if(SECCIONES[i].figs[j].code===ttFigData.code){sec=SECCIONES[i];break;}
+      }
+      if(sec)break;
+    }
+    if(sec){
+      // Find section counter element by section id
+      var secEl=document.getElementById('sec-prog-'+sec.id);
+      if(secEl){
+        var secTengo=sec.figs.filter(function(f){
+          return coleccion[f.code]==='tengo'||coleccion[f.code]==='repetida';
+        }).length;
+        secEl.textContent=secTengo+'/'+sec.figs.length;
+      }
+    }
+  }
 }
 
 /* ===== INTERCAMBIOS ===== */
@@ -767,7 +862,7 @@ function renderIntercambiosHTML(allFigs){
   if(misRep.length===0){h+='<div style="font-size:.8rem;color:var(--txt2);text-align:center;padding:.4rem">Aún no tienes figuritas repetidas.<br><small>Ve a Mi Colección y marca con 🔁</small></div>';}
   else{
     h+='<div style="font-size:.72rem;font-weight:700;color:var(--txt2);margin-bottom:.32rem">Selecciona las que quieres publicar:</div><div class="fig-selector" id="fig-sel-list">';
-    misRep.forEach(function(code){var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===code){f=allFigs[i];break;}}if(f){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var isSel=selectedFigs.indexOf(code)>=0;h+='<div class="fig-sel-item'+(isSel?' sel':'')+'" id="'+sid+'" onclick="toggleSel(\''+code.replace(/'/g,"\\'")+'\')">'+f.bandera+' '+code+'</div>';}});
+    misRep.forEach(function(code){var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===code){f=allFigs[i];break;}}if(f){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var isSel=selectedFigs.indexOf(code)>=0;h+='<div class="fig-sel-item'+(isSel?' sel':'')+'" id="'+sid+'" data-code="'+code+'" onclick="toggleSel(this.dataset.code)">'+f.bandera+' '+code+'</div>';}});
     h+='</div><button class="btn-primary" style="padding:.58rem;font-size:.88rem" onclick="publicarRepetidas()">PUBLICAR SELECCIONADAS</button>';
   }
   h+='</div>';
@@ -785,18 +880,23 @@ function renderIntercambiosHTML(allFigs){
     var distStr=dist===0?'Tu misma zona':(dist<=20?dist+' km (cerca)':(dist<=60?dist+' km':comuna));
     var esCerca=dist<=20;var esYo=u.uid==='me';
     var fullName=(p.nombre||'')+(p.apellido&&!esYo?' '+p.apellido:'');
-    var safeId=(u.uid||'').replace(/'/g,"\\'");var safeName=fullName.replace(/'/g,"\\'");
+    var safeId=encodeURIComponent(u.uid||'');var safeName=encodeURIComponent(fullName);
     h+='<div class="pub-card"><div class="pub-top"><div class="pub-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div><div class="pub-info"><div class="pub-usuario">'+fullName+'</div><div class="pub-lugar">📍 '+comuna+' &nbsp;<span class="dist-badge'+(esCerca?' cerca':'')+'">'+(esYo?'Tú':distStr)+'</span></div></div></div><div class="figs-pub">';
     u.reps.forEach(function(r){var cls=r.tipo==='foil'?'fig-pill foil':'fig-pill';var icon=r.tipo==='foil'?'⭐':'';h+='<div class="'+cls+'">'+icon+' '+r.code+' '+r.nom+'</div>';});
     h+='</div>';
-    if(!esYo){h+='<div class="pub-actions"><button class="btn-msg btn-msg-main" onclick="openChat(\''+safeId+'\',\''+safeName+'\')">💬 Mensaje</button><button class="btn-msg btn-msg-sec" onclick="openChat(\''+safeId+'\',\''+safeName+'\')">🔄 Proponer cambio</button></div>';}
+    if(!esYo){
+      h+='<div class="pub-actions">'
+        +'<button class="btn-msg btn-msg-main" data-uid="'+safeId+'" data-nm="'+safeName+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">💬 Mensaje</button>'
+        +'<button class="btn-msg btn-msg-sec" data-uid="'+safeId+'" data-nm="'+safeName+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">🔄 Proponer cambio</button>'
+        +'</div>';
+    }
     else{h+='<div style="font-size:.73rem;color:var(--verde);font-weight:700;text-align:center;padding:.25rem">✓ Tu publicación — <a href="#" onclick="eliminarMisPublicaciones();return false;" style="color:var(--rojo)">Eliminar</a></div>';}
     h+='</div>';
   });
   return h;
 }
 
-function toggleSel(code){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var el=document.getElementById(sid);var idx=selectedFigs.indexOf(code);if(idx>=0){selectedFigs.splice(idx,1);if(el)el.classList.remove('sel');}else{selectedFigs.push(code);if(el)el.classList.add('sel');}}
+function toggleSel(code){var sid='sel-'+code.replace(/[^a-z0-9]/gi,'_');var el=document.getElementById(sid);var ix=selectedFigs.indexOf(code);if(ix>=0){selectedFigs.splice(ix,1);if(el)el.classList.remove('sel');}else{selectedFigs.push(code);if(el)el.classList.add('sel');}}
 function setFiltro(f){filtroActivo=f;switchTab('intercambios');}
 async function publicarRepetidas(){
   if(selectedFigs.length===0){showToast('Selecciona al menos una figurita');return;}
@@ -858,6 +958,18 @@ function renderUsuario(){
   return h;
 }
 
+function toggleProgreso(){
+  var extra=document.getElementById('prog-lista-extra');
+  var icon=document.getElementById('prog-toggle-icon');
+  if(!extra||!icon)return;
+  if(extra.style.display==='none'){
+    extra.style.display='block';
+    icon.textContent='Ver menos ▲';
+  }else{
+    extra.style.display='none';
+    icon.textContent='Ver todas ▼';
+  }
+}
 async function logout(){await sb.auth.signOut();usuario=null;coleccion={};publicaciones=[];selectedFigs=[];searchQuery='';filtroActivo='todos';_allPubs=[];document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
 
@@ -964,8 +1076,8 @@ function renderMensajesTab(){
     var textoUltimo = ultimoMsg ? (esYo?'Tú: ':'')+ultimoMsg.texto : '';
     if(textoUltimo.length > 45) textoUltimo = textoUltimo.slice(0,45)+'...';
     var hora = ultimoMsg ? new Date(ultimoMsg.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) : '';
-    var safeName = nombre.replace(/'/g,"\'");
-    var safeId = conv.partnerId.replace(/'/g,"\'");
+    var safeName = encodeURIComponent(nombre);
+    var safeId = encodeURIComponent(conv.partnerId);
 
     var divClass = 'conv-item' + (conv.unread>0 ? ' unread' : '');
     var divEl = document.createElement('div');
@@ -1024,6 +1136,20 @@ async function checkUnreadMessages(){
     .eq('leido', false);
   var count = res.count || 0;
   updateMensajesBadge(count);
+}
+
+
+function toggleProgreso(){
+  var extra=document.getElementById('prog-lista-extra');
+  var icon=document.getElementById('prog-toggle-icon');
+  if(!extra||!icon)return;
+  if(extra.style.display==='none'){
+    extra.style.display='block';
+    icon.textContent='Ver menos ▲';
+  }else{
+    extra.style.display='none';
+    icon.textContent='Ver todas ▼';
+  }
 }
 
 initApp();
@@ -1097,6 +1223,14 @@ initApp();
 .msg-empty-icon{font-size:3rem;display:block;margin-bottom:.8rem}
 .msg-empty h3{font-weight:800;font-size:1rem;color:var(--txt);margin-bottom:.4rem}
 .msg-empty p{font-size:.82rem;line-height:1.5}
+
+.grupo-header{
+  font-weight:800;font-size:1.1rem;color:#fff;
+  background:linear-gradient(135deg,var(--azul),#2a5fd4);
+  border-radius:10px;padding:.5rem 1rem;margin:1.2rem 0 .5rem;
+  letter-spacing:2px;display:flex;align-items:center;gap:.5rem;
+}
+.grupo-header::before{content:'⚽';font-size:.9rem;}
 </style>
 
 <script>
