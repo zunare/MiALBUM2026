@@ -967,18 +967,34 @@ function renderMensajesTab(){
     var safeName = nombre.replace(/'/g,"\'");
     var safeId = conv.partnerId.replace(/'/g,"\'");
 
-    h += '<div class="conv-item'+(conv.unread>0?' unread':'')+'" onclick="openChatFromMensajes(''+safeId+'',''+safeName+'')">'
-      +'<div class="conv-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div>'
-      +'<div class="conv-info">'
-      +'<div class="conv-nombre">'+nombre+'</div>'
-      +'<div class="conv-lugar" style="font-size:.7rem;color:var(--txt2)">📍 '+(p.comuna||'')+'</div>'
-      +'<div class="conv-ultimo">'+textoUltimo+'</div>'
-      +'</div>'
-      +'<div class="conv-meta">'
-      +'<div class="conv-hora">'+hora+'</div>'
-      +(conv.unread>0?'<div class="conv-unread-badge">'+conv.unread+'</div>':'')
-      +'</div>'
-      +'</div>';
+    var divClass = 'conv-item' + (conv.unread>0 ? ' unread' : '');
+    var divEl = document.createElement('div');
+    divEl.className = divClass;
+    divEl.innerHTML = ''
+      + '<div class="conv-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+( p.avatar||'?')+'</div>'
+      + '<div class="conv-info">'
+      + '<div class="conv-nombre">'+nombre+'</div>'
+      + '<div style="font-size:.7rem;color:var(--txt2)">📍 '+(p.comuna||'')+'</div>'
+      + '<div class="conv-ultimo">'+textoUltimo+'</div>'
+      + '</div>'
+      + '<div class="conv-meta">'
+      + '<div class="conv-hora">'+hora+'</div>'
+      + (conv.unread>0 ? '<div class="conv-unread-badge">'+conv.unread+'</div>' : '')
+      + '</div>';
+    divEl.addEventListener('click', (function(id, nm){ return function(){ openChatFromMensajes(id, nm); }; })(conv.partnerId, nombre));
+    // Can't use innerHTML insertion with event listeners, build string instead
+    h += '<div class="'+divClass+'" onclick="openChatFromMensajes(this.dataset.uid,this.dataset.nm)" data-uid="'+conv.partnerId.replace(/"/g,'&quot;')+'" data-nm="'+nombre.replace(/"/g,'&quot;')+'">'
+      + '<div class="conv-avatar" style="background:'+(p.color||'#1a3a8a')+'">'+( p.avatar||'?')+'</div>'
+      + '<div class="conv-info">'
+      + '<div class="conv-nombre">'+nombre+'</div>'
+      + '<div style="font-size:.7rem;color:var(--txt2)">📍 '+(p.comuna||'')+'</div>'
+      + '<div class="conv-ultimo">'+textoUltimo+'</div>'
+      + '</div>'
+      + '<div class="conv-meta">'
+      + '<div class="conv-hora">'+hora+'</div>'
+      + (conv.unread>0 ? '<div class="conv-unread-badge">'+conv.unread+'</div>' : '')
+      + '</div>'
+      + '</div>';
   });
 
   h += '</div>';
