@@ -666,7 +666,8 @@ function renderColeccion(){
       +'<div class="fig-grid">';
     figsVis.forEach(function(f){
       var estado=coleccion[f.code]||'';
-      out+='<div class="'+getFigClass(f,estado)+'" data-code="'+f.code+'" onclick="openFigPanel(this)">'
+      var cls=getFigClass(f,estado);
+      out+='<div class="'+cls+'" data-code="'+f.code+'" data-nom="'+f.nom.replace(/"/g,'&quot;')+'" data-country="'+sec.nombre.replace(/"/g,'&quot;')+'" data-type="'+f.type+'" data-secid="'+sec.id+'" onclick="openFigPanelById(this.dataset.code,this.dataset.nom,this.dataset.country,this.dataset.type)">'
         +'<div class="fig-inner">'
         +'<div class="fig-code">'+f.code+'</div>'
         +'<div class="fig-nombre">'+f.nom+'</div>'
@@ -706,22 +707,7 @@ function renderColeccion(){
 function onSearch(v){searchQuery=v;document.getElementById('main-content').innerHTML=renderColeccion();var el=document.getElementById('buscar-inp');if(el){el.focus();el.setSelectionRange(v.length,v.length);}}
 
 /* Panel inferior para marcar figuritas */
-function openFigPanel(el){
-  var code=el.dataset.code;
-  var fig=null,country='',type='Base',nom='';
-  for(var i=0;i<SECCIONES.length;i++){
-    for(var j=0;j<SECCIONES[i].figs.length;j++){
-      if(SECCIONES[i].figs[j].code===code){
-        fig=SECCIONES[i].figs[j];
-        country=SECCIONES[i].nombre;
-        type=fig.type;
-        nom=fig.nom;
-        break;
-      }
-    }
-    if(fig)break;
-  }
-  if(!fig)return;
+function openFigPanelById(code,nom,country,type){
   ttFigData={code:code,nom:nom,country:country,type:type};
   document.getElementById('fp-code').textContent=code;
   document.getElementById('fp-name').textContent=nom;
@@ -962,7 +948,8 @@ function toggleProgreso(){
   var extra=document.getElementById('prog-lista-extra');
   var icon=document.getElementById('prog-toggle-icon');
   if(!extra||!icon)return;
-  if(extra.style.display==='none'){
+  var isHidden=extra.style.display==='none'||extra.style.display==='';
+  if(isHidden){
     extra.style.display='block';
     icon.textContent='Ver menos ▲';
   }else{
@@ -1143,7 +1130,8 @@ function toggleProgreso(){
   var extra=document.getElementById('prog-lista-extra');
   var icon=document.getElementById('prog-toggle-icon');
   if(!extra||!icon)return;
-  if(extra.style.display==='none'){
+  var isHidden=extra.style.display==='none'||extra.style.display==='';
+  if(isHidden){
     extra.style.display='block';
     icon.textContent='Ver menos ▲';
   }else{
