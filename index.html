@@ -511,10 +511,23 @@ async function doReg(){
   if(!tyc)return showErr('reg-err','Debes aceptar los Términos y Condiciones');
   setBusy('btn-reg',true,'CREAR CUENTA ⚽');
   try{
-    var res=await sb.auth.signUp({email:email,password:pass,options:{emailRedirectTo:window.location.href}});
+    // Store profile data in user metadata so it's saved even without session
+    var meta={nombre:nom,apellido:ape,dob:dob,region:reg,comuna:com,avatar:mkAv(nom,ape),color:mkCol(nom+ape)};
+    var res=await sb.auth.signUp({
+      email:email,password:pass,
+      options:{
+        emailRedirectTo:window.location.href,
+        data:meta
+      }
+    });
     if(res.error){showErr('reg-err',res.error.message);setBusy('btn-reg',false,'CREAR CUENTA ⚽');return;}
     var uid=res.data.user.id;
-    await sb.from('profiles').upsert({id:uid,nombre:nom,apellido:ape,dob:dob,region:reg,comuna:com,avatar:mkAv(nom,ape),color:mkCol(nom+ape)});
+    // Try upsert - works if confirm email is OFF (session exists)
+    var profRes=await sb.from('profiles').upsert({id:uid,nombre:nom,apellido:ape,dob:dob,region:reg,comuna:com,avatar:mkAv(nom,ape),color:mkCol(nom+ape)});
+    if(profRes.error){
+      // If upsert failed (no session yet), it will be saved on first login via metadata
+      console.log('Profile will be saved on first login');
+    }
     if(res.data.session){await loadUser(res.data.user);return;}
     document.getElementById('confirm-txt').textContent='Te enviamos un link a '+email+'. Confírmalo y luego inicia sesión.';
     document.getElementById('confirm-box').classList.add('show');
@@ -548,7 +561,31 @@ async function doLog(){
 // ===== LOAD USER =====
 async function loadUser(authUser){
   var pr=await sb.from('profiles').select('*').eq('id',authUser.id).single();
-  if(pr.error||!pr.data){showErr('log-err','Perfil no encontrado. Regístrate primero.');return;}
+  // If no profile, try to create from metadata (happens when confirm email is ON)
+  if(pr.error||!pr.data){
+    var meta=authUser.user_metadata||{};
+    if(meta.nombre){
+      // We have metadata, save profile now that session is active
+      var ins=await sb.from('profiles').upsert({
+        id:authUser.id,
+        nombre:meta.nombre,
+        apellido:meta.apellido||'',
+        dob:meta.dob||null,
+        region:meta.region||'',
+        comuna:meta.comuna||'',
+        avatar:meta.avatar||mkAv(meta.nombre,meta.apellido||''),
+        color:meta.color||mkCol(meta.nombre+(meta.apellido||''))
+      });
+      if(!ins.error){
+        // Reload profile
+        pr=await sb.from('profiles').select('*').eq('id',authUser.id).single();
+      }
+    }
+    if(pr.error||!pr.data){
+      showErr('log-err','Error cargando perfil. Intenta de nuevo.');
+      return;
+    }
+  }
   user=pr.data;
   var cr=await sb.from('coleccion').select('sticker_code,estado').eq('user_id',user.id);
   col={};if(cr.data)cr.data.forEach(function(r){col[r.sticker_code]=r.estado;});
@@ -772,7 +809,7 @@ function updateCounters(){
 // ===== INTERCAMBIOS =====
 async function loadInt(){
   var allFigs=[];S.forEach(function(s){s.figs.forEach(function(f){allFigs.push({code:f.code,nom:f.nom,type:f.type,pais:s.nombre,ban:s.bandera});});});
-  var res=await sb.from('publicaciones').select('sticker_code,user_id,profiles(id,nombre,apellido,comuna,avatar,color)').neq('user_id',user.id);
+  var res=await sb.from('publicaciones').select('sticker_code,user_id,profiles(id,nombre,apellido,comuna,region,avatar,color)').neq('user_id',user.id);
   var pm={};
   if(res.data){res.data.forEach(function(r){var uid=r.user_id;if(!pm[uid])pm[uid]={uid:uid,p:r.profiles,reps:[]};var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===r.sticker_code){f=allFigs[i];break;}}if(f)pm[uid].reps.push({code:r.sticker_code,nom:f.nom,tipo:f.type,pais:f.pais});});}
   allPubs=Object.values(pm);
@@ -857,20 +894,23 @@ async function loadMsgs(){
   });
   var pids=Object.keys(cm);
   if(!pids.length){document.getElementById('content').innerHTML='<div class="msg-empty"><span class="msg-empty-ico">💬</span><h3>Sin mensajes aún</h3><p>Contacta a alguien en Intercambios.</p></div>';return;}
-  var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,comuna').in('id',pids);
-  var profiles={};if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
+  var profiles={};
+  if(pids.length>0){
+    var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,comuna,region').in('id',pids);
+    if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
+  }
   if(pids.length){await sb.from('mensajes').update({leido:true}).eq('para_user_id',user.id).eq('leido',false);}
   updateBadge(0);
   var h='<div style="margin-bottom:.75rem"><strong style="font-size:.88rem;font-weight:800">Conversaciones ('+pids.length+')</strong></div><div class="conv-list">';
   pids.forEach(function(pid){
     var cv=cm[pid];var p=profiles[pid]||{};
-    var nm=(p.nombre||'?')+' '+(p.apellido||'');
+    var nm=((p&&p.nombre)?p.nombre+' '+(p.apellido||''):'Usuario');
     var last=cv.msgs[0];var esYo=last&&last.de_user_id===user.id;
     var ltxt=last?(esYo?'Tú: ':'')+last.texto:'';if(ltxt.length>42)ltxt=ltxt.slice(0,42)+'...';
     var hora=last?new Date(last.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'';
     var eid=encodeURIComponent(pid);var enm=encodeURIComponent(nm);
     h+='<div class="conv-it'+(cv.unread>0?' unread':'')+'" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">'
-      +'<div class="conv-av" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div>'
+      +'<div class="conv-av" style="background:'+(p&&p.color?p.color:'#1a3a8a')+'">'+(p&&p.avatar?p.avatar:'?')+'</div>'
       +'<div class="conv-info"><div class="conv-nm">'+nm+'</div><div class="conv-loc">📍 '+(p.comuna||'')+'</div><div class="conv-last">'+ltxt+'</div></div>'
       +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(cv.unread>0?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
       +'</div>';
@@ -897,6 +937,10 @@ async function openChat(uid,nombre){
   document.getElementById('chat-ov').classList.add('open');
   var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:true});
   renderChatMsgs(res.data||[]);
+  // Mark messages from this user as read
+  await sb.from('mensajes').update({leido:true}).eq('para_user_id',user.id).eq('de_user_id',uid).eq('leido',false);
+  // Update badge
+  checkBadge();
   setTimeout(function(){document.getElementById('chat-inp').focus();},100);
 }
 function renderChatMsgs(msgs){
