@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -337,6 +338,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
         <div style="font-size:2rem;margin-bottom:.4rem">📧</div>
         <h3>¡Revisa tu correo!</h3>
         <p id="confirm-txt">Confirma tu email y luego inicia sesión.</p>
+        <p style="font-size:.75rem;color:#555;margin-top:.3rem">📬 Revisa tu bandeja de entrada y también la carpeta de <strong>Spam</strong>.</p>
         <div style="margin-top:.7rem;padding:.6rem .8rem;background:#fff3cd;border-radius:8px;font-size:.73rem;color:#856404;line-height:1.5;text-align:left">
           <strong>⚠️ ¿No lo encuentras?</strong><br>
           Revisa tu carpeta de <strong>Spam</strong> o <strong>Correo no deseado</strong>. 
@@ -375,6 +377,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 </div>
 
 <!-- PANEL FIGURITA -->
+
 <div class="panel-ov" id="panel-ov" onclick="closePanel()"></div>
 <div class="panel" id="panel">
   <div class="panel-hdr">
@@ -391,6 +394,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 </div>
 
 <!-- CHAT -->
+
 <div class="chat-ov" id="chat-ov">
   <div class="chat-box">
     <div class="chat-hdr"><h3 id="chat-title"></h3><button class="x-btn" onclick="closeChat()">✕</button></div>
@@ -405,6 +409,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 <div class="toast" id="toast"></div>
 
 <!-- MODALES -->
+
 <div class="modal-ov" id="m-tyc"><div class="modal-box">
   <div class="modal-hdr"><h3>📋 Términos y Condiciones</h3><button class="x-btn" onclick="closeModal('m-tyc')">✕</button></div>
   <div class="modal-body">
@@ -679,18 +684,18 @@ function renderCol(){
 
   var GRUPOS=[
     {l:'🌍 Presentación',ids:['fwc','cc']},
-    {l:'Grupo A',ids:['qat','ecu','sen','ned']},
-    {l:'Grupo B',ids:['eng','irn','usa','sco']},
-    {l:'Grupo C',ids:['mex','ksa','cze','bih']},
-    {l:'Grupo D',ids:['fra','aus','tun','cpv']},
-    {l:'Grupo E',ids:['esp','gha','ger','jpn']},
-    {l:'Grupo F',ids:['bel','can','mar','cro']},
-    {l:'Grupo G',ids:['bra','swe','sui','cod']},
-    {l:'Grupo H',ids:['por','uru','kor','egy']},
-    {l:'Grupo I',ids:['nor','col','uzb','irq']},
-    {l:'Grupo J',ids:['alg','nzl','irn2','bih2']},
-    {l:'Grupo K',ids:['tur','civ','par','rsa']},
-    {l:'Grupo L',ids:['aut','jor','hai','cuw']},
+    {l:'Grupo A',ids:['mex','rsa','kor','cze']},
+    {l:'Grupo B',ids:['can','sui','qat','bih']},
+    {l:'Grupo C',ids:['bra','mar','hai','sco']},
+    {l:'Grupo D',ids:['usa','par','aus','tur']},
+    {l:'Grupo E',ids:['ger','cuw','civ','ecu']},
+    {l:'Grupo F',ids:['ned','jpn','tun','swe']},
+    {l:'Grupo G',ids:['bel','egy','irn','nzl']},
+    {l:'Grupo H',ids:['esp','cpv','ksa','uru']},
+    {l:'Grupo I',ids:['fra','sen','irq','nor']},
+    {l:'Grupo J',ids:['arg','alg','aut','jor']},
+    {l:'Grupo K',ids:['por','col','uzb','pan']},
+    {l:'Grupo L',ids:['eng','cro','gha','pan']},
   ];
 
   var secMap={};S.forEach(function(s){secMap[s.id]=s;});
@@ -927,8 +932,13 @@ async function loadMsgs(){
 
 async function checkBadge(){
   if(!user)return;
-  var res=await sb.from('mensajes').select('id',{count:'exact',head:true}).eq('para_user_id',user.id).eq('leido',false);
-  updateBadge(res.count||0);
+  var res=await sb.from('mensajes')
+    .select('id',{count:'exact',head:true})
+    .eq('para_user_id',user.id)
+    .eq('leido',false);
+  var count=0;
+  if(res.count!==null&&res.count!==undefined)count=res.count;
+  updateBadge(count);
 }
 function updateBadge(n){
   var b=document.getElementById('msg-badge');if(!b)return;
@@ -943,28 +953,29 @@ async function openChat(uid,nombre){
   document.getElementById('chat-ov').classList.add('open');
   var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:true});
   renderChatMsgs(res.data||[]);
-  // Mark messages from this user as read
-  await sb.from('mensajes').update({leido:true})
+  // Mark ALL messages from this user as read
+  await sb.from('mensajes')
+    .update({leido:true})
     .eq('para_user_id', user.id)
     .eq('de_user_id', uid);
-  // Update badge immediately
+  // Update badge immediately to 0 for this conversation
+  // Then recount from DB after a small delay to ensure write completed
   updateBadge(0);
-  // Also refresh real count from DB
-  checkBadge();
-  // If we're on the mensajes tab, refresh the list too
-  if(tab==='msg'){
-    var convItems=document.querySelectorAll('.conv-it');
-    convItems.forEach(function(el){
-      if(el.dataset.uid===encodeURIComponent(uid)){
-        el.classList.remove('unread');
-        var badge=el.querySelector('.conv-badge');
-        if(badge)badge.remove();
-        var last=el.querySelector('.conv-last');
-        if(last)last.style.fontWeight='normal';
-        last.style.color='var(--txt2)';
-      }
-    });
-  }
+  setTimeout(async function(){
+    await checkBadge();
+    // Also refresh mensajes tab if open
+    if(tab==='msg'){
+      var convItems=document.querySelectorAll('.conv-it');
+      convItems.forEach(function(el){
+        if(el.dataset.uid===encodeURIComponent(uid)){
+          el.classList.remove('unread');
+          var b=el.querySelector('.conv-badge');if(b)b.remove();
+          var l=el.querySelector('.conv-last');
+          if(l){l.style.fontWeight='normal';l.style.color='var(--txt2)';}
+        }
+      });
+    }
+  }, 500);
   setTimeout(function(){document.getElementById('chat-inp').focus();},100);
 }
 function renderChatMsgs(msgs){
@@ -1036,5 +1047,6 @@ async function logout(){
 
 init();
 </script>
+
 </body>
 </html>
