@@ -337,6 +337,11 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
         <div style="font-size:2rem;margin-bottom:.4rem">📧</div>
         <h3>¡Revisa tu correo!</h3>
         <p id="confirm-txt">Confirma tu email y luego inicia sesión.</p>
+        <div style="margin-top:.7rem;padding:.6rem .8rem;background:#fff3cd;border-radius:8px;font-size:.73rem;color:#856404;line-height:1.5;text-align:left">
+          <strong>⚠️ ¿No lo encuentras?</strong><br>
+          Revisa tu carpeta de <strong>Spam</strong> o <strong>Correo no deseado</strong>. 
+          Si está ahí, márcalo como <strong>"No es spam"</strong> para recibirlos directo en el futuro.
+        </div>
       </div>
       <button class="btn" id="btn-reg" onclick="doReg()">CREAR CUENTA ⚽</button>
     </div>
@@ -549,8 +554,9 @@ async function doLog(){
     var res=await sb.auth.signInWithPassword({email:email,password:pass});
     if(res.error){
       var m=res.error.message;
-      if(m.indexOf('Invalid')>=0||m.indexOf('credentials')>=0)m='Email o contraseña incorrectos';
-      if(m.indexOf('confirm')>=0||m.indexOf('Email not confirmed')>=0)m='Confirma tu email primero. Revisa tu bandeja de entrada.';
+      if(m.indexOf('Invalid')>=0||m.indexOf('credentials')>=0||m.indexOf('invalid_credentials')>=0)m='Email o contraseña incorrectos';
+      else if(m==='Email not confirmed')m='Debes confirmar tu email. Revisa tu bandeja de entrada y haz clic en el link.';
+      else if(m.indexOf('confirm')>=0)m='Debes confirmar tu email. Revisa tu bandeja de entrada.';
       showErr('log-err',m);setBusy('btn-log',false,'ENTRAR AL ÁLBUM ⚽');return;
     }
     await loadUser(res.data.user);
@@ -938,9 +944,27 @@ async function openChat(uid,nombre){
   var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:true});
   renderChatMsgs(res.data||[]);
   // Mark messages from this user as read
-  await sb.from('mensajes').update({leido:true}).eq('para_user_id',user.id).eq('de_user_id',uid).eq('leido',false);
-  // Update badge
+  await sb.from('mensajes').update({leido:true})
+    .eq('para_user_id', user.id)
+    .eq('de_user_id', uid);
+  // Update badge immediately
+  updateBadge(0);
+  // Also refresh real count from DB
   checkBadge();
+  // If we're on the mensajes tab, refresh the list too
+  if(tab==='msg'){
+    var convItems=document.querySelectorAll('.conv-it');
+    convItems.forEach(function(el){
+      if(el.dataset.uid===encodeURIComponent(uid)){
+        el.classList.remove('unread');
+        var badge=el.querySelector('.conv-badge');
+        if(badge)badge.remove();
+        var last=el.querySelector('.conv-last');
+        if(last)last.style.fontWeight='normal';
+        last.style.color='var(--txt2)';
+      }
+    });
+  }
   setTimeout(function(){document.getElementById('chat-inp').focus();},100);
 }
 function renderChatMsgs(msgs){
