@@ -608,7 +608,7 @@ async function loadUser(authUser){
   document.getElementById('u-nm').textContent=user.nombre||'';
   goTab('col');
   checkBadge();
-  setInterval(function(){if(user)checkBadge();},30000);
+  setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
 // ===== INIT =====
@@ -701,7 +701,16 @@ function renderCol(){
 
   function renderSec(s){
     if(!s)return'';
-    var figs=q?s.figs.filter(function(f){return f.nom.toLowerCase().indexOf(q)>=0||f.code.toLowerCase().indexOf(q)>=0||s.nombre.toLowerCase().indexOf(q)>=0;}):s.figs;
+    var qUp=q.toUpperCase().replace(/\s/g,'');
+    var figs=q?s.figs.filter(function(f){
+      if(f.nom.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
+      if(s.nombre.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
+      if(f.code.toUpperCase().indexOf(qUp)>=0)return true;
+      var cStrip=f.code.toUpperCase().replace(/0+(\d+)$/,'$1');
+      var qStrip=qUp.replace(/0+(\d+)$/,'$1');
+      if(cStrip.indexOf(qStrip)>=0)return true;
+      return false;
+    }):s.figs;
     if(!figs.length)return'';
     var st=s.figs.filter(function(f){return col[f.code]==='tengo'||col[f.code]==='repetida';}).length;
     var o='<div class="sec-title"><div class="sec-left"><span>'+s.bandera+'</span>'+s.nombre+'</div>'
@@ -922,7 +931,7 @@ async function loadMsgs(){
     h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">'
       +'<div class="conv-av" style="background:'+(p&&p.color?p.color:'#1a3a8a')+'">'+(p&&p.avatar?p.avatar:'?')+'</div>'
       +'<div class="conv-info"><div class="conv-nm">'+nm+'</div><div class="conv-loc">📍 '+(p.comuna||'')+'</div><div class="conv-last">'+ltxt+'</div></div>'
-      +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(cv.unread>0?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
+      +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(isUnread?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
       +'</div>';
   });
   h+='</div>';
@@ -947,11 +956,27 @@ function updateBadge(n){
 // ===== CHAT =====
 async function openChat(uid,nombre){
   chatTarget={uid:uid,nombre:nombre};
+  // Mark as read in memory BEFORE opening (prevents re-showing as unread)
+  readConvs[uid]=true;
+  // Update DOM immediately
+  var convEl=document.querySelector('.conv-it[data-uid="'+encodeURIComponent(uid)+'"]');
+  if(convEl){
+    convEl.classList.remove('unread');
+    var cb=convEl.querySelector('.conv-badge');
+    if(cb){var n=parseInt(cb.textContent)||0;cb.remove();
+      var cur=parseInt((document.getElementById('msg-badge')||{}).textContent)||0;
+      updateBadge(Math.max(0,cur-n));
+    }
+    var cl=convEl.querySelector('.conv-last');
+    if(cl){cl.style.fontWeight='normal';cl.style.color='var(--txt2)';}
+  }
   document.getElementById('chat-title').textContent='💬 '+nombre;
   document.getElementById('chat-msgs').innerHTML='<div style="text-align:center;padding:1rem;color:var(--txt2);font-size:.78rem">Cargando...</div>';
   document.getElementById('chat-ov').classList.add('open');
   var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:true});
   renderChatMsgs(res.data||[]);
+  // Mark as read in DB (async, no await needed)
+  sb.from('mensajes').update({leido:true}).eq('para_user_id',user.id).eq('de_user_id',uid).then(function(){});
   // Mark ALL messages from this user as read immediately
   var markRes = await sb.from('mensajes')
     .update({leido:true})
