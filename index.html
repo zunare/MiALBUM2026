@@ -674,7 +674,7 @@ function renderCol(){
     +'<div class="stat"><div class="stat-n">'+total+'</div><div class="stat-l">Total</div></div>'
     +'<div class="stat"><div class="stat-n v" id="cnt-t">'+cn.t+'</div><div class="stat-l">Tengo</div></div>'
     +'<div class="stat"><div class="stat-n r" id="cnt-r">'+cn.r+'</div><div class="stat-l">Repetidas</div></div>'
-    +'<div class="stat"><div class="stat-n o" id="cnt-f">'+foils+'</div><div class="stat-l">Foils</div></div>'
+    +'<div class="stat"><div class="stat-n o" id="cnt-f">'+foils+'</div><div class="stat-l">Especiales</div></div>'
     +'</div>'
     +'<div class="pb-wrap"><div class="pb" id="pb-bar" style="width:'+pct+'%"></div></div>'
     +'<div class="pb-txt" id="pb-txt">'+pct+'% completado — '+(total-cn.t)+' restantes</div>'
@@ -682,7 +682,7 @@ function renderCol(){
     +'<div class="ley-i"><div class="ley-b v"></div>Sin pegar</div>'
     +'<div class="ley-i"><div class="ley-b t"></div>Tengo ✓</div>'
     +'<div class="ley-i"><div class="ley-b rp"></div>Repetida ×</div>'
-    +'<div class="ley-i"><div class="ley-b f"></div>Foil</div>'
+    +'<div class="ley-i"><div class="ley-b f"></div>Especial</div>'
     +'</div>'
     +'<div class="col-filter-row">'
     +'<div class="search-wrap"><span class="search-ico">🔍</span>'
@@ -780,7 +780,7 @@ function openPanel(code,nom,country,type){
   document.getElementById('p-code').textContent=code;
   document.getElementById('p-name').textContent=nom;
   document.getElementById('p-country').textContent=country;
-  document.getElementById('p-type').innerHTML=type==='foil'?'<span class="panel-type foil">⭐ Foil</span>':'<span class="panel-type base">Base</span>';
+  document.getElementById('p-type').innerHTML=type==='foil'?'<span class="panel-type foil">⭐ Especial</span>':'<span class="panel-type base">Base</span>';
   updatePanelBtns();
   document.getElementById('panel').classList.add('open');
   document.getElementById('panel-ov').classList.add('open');
@@ -870,7 +870,7 @@ function renderInt(allFigs){
   h+='<div class="filtros">'
     +'<button class="filt'+(filt==='all'?' on':'')+'" data-f="all" onclick="setFilt(this.dataset.f)">Todos</button>'
     +'<button class="filt'+(filt==='near'?' on':'')+'" data-f="near" onclick="setFilt(this.dataset.f)">📍 Cerca</button>'
-    +'<button class="filt'+(filt==='foil'?' on':'')+'" data-f="foil" onclick="setFilt(this.dataset.f)">⭐ Foils</button>'
+    +'<button class="filt'+(filt==='foil'?' on':'')+'" data-f="foil" onclick="setFilt(this.dataset.f)">⭐ Especiales</button>'
     +'<button class="filt'+(filt==='sur'?' on':'')+'" data-f="sur" onclick="setFilt(this.dataset.f)">🌎 Sudamérica</button>'
     +'</div>';
   var SURAM=['Argentina','Brasil','Colombia','Uruguay','Ecuador','Paraguay'];
