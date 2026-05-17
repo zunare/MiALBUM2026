@@ -115,6 +115,10 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .search-inp{width:100%;padding:.55rem .85rem .55rem 2rem;border:2px solid var(--borde);border-radius:10px;font-family:var(--ff);font-size:.84rem}
 .search-inp:focus{outline:none;border-color:var(--azul)}
 .search-ico{position:absolute;left:.62rem;top:50%;transform:translateY(-50%);font-size:.86rem;pointer-events:none}
+.col-filter-row{display:flex;gap:.5rem;margin-bottom:.7rem;align-items:center}
+.col-filter-row .search-wrap{flex:1;margin-bottom:0}
+.btn-faltan{padding:.55rem .9rem;border-radius:10px;border:2px solid var(--rojo);background:#fff;color:var(--rojo);font-family:var(--ff);font-size:.76rem;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s}
+.btn-faltan.on{background:var(--rojo);color:#fff}
 /* GROUP HEADER */
 .grp-hdr{margin:1.1rem 0 .4rem;padding:.42rem .85rem;background:linear-gradient(135deg,#050e24,#1a3a8a);border-radius:10px;color:#fff;font-weight:800;font-size:.84rem;letter-spacing:.5px}
 /* SECTION */
@@ -450,7 +454,7 @@ var S=[{"id": "fwc", "nombre": "FIFA World Cup 2026", "bandera": "🌍", "figs":
 var REGIONES={"Arica y Parinacota": ["Arica", "Camarones", "Putre", "General Lagos"], "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte", "Camiña", "Colchane", "Huara", "Pica"], "Antofagasta": ["Antofagasta", "Mejillones", "Sierra Gorda", "Taltal", "Calama", "Ollagüe", "San Pedro de Atacama", "Tocopilla", "María Elena"], "Atacama": ["Copiapó", "Caldera", "Tierra Amarilla", "Chañaral", "Diego de Almagro", "Vallenar", "Alto del Carmen", "Freirina", "Huasco"], "Coquimbo": ["La Serena", "Coquimbo", "Andacollo", "La Higuera", "Paiguano", "Vicuña", "Illapel", "Canela", "Los Vilos", "Salamanca", "Ovalle", "Combarbalá", "Monte Patria", "Punitaqui", "Río Hurtado"], "Valparaíso": ["Algarrobo", "Cabildo", "Calle Larga", "Cartagena", "Casablanca", "Concón", "El Quisco", "El Tabo", "Hijuelas", "La Calera", "La Cruz", "La Ligua", "Limache", "Los Andes", "Nogales", "Olmué", "Papudo", "Petorca", "Puchuncaví", "Quilpué", "Quillota", "Quintero", "Rinconada", "San Antonio", "San Felipe", "Santa María", "Santo Domingo", "Valparaíso", "Villa Alemana", "Viña del Mar", "Zapallar"], "Metropolitana": ["Alhué", "Buin", "Calera de Tango", "Cerrillos", "Cerro Navia", "Colina", "Conchalí", "Curacaví", "El Bosque", "El Monte", "Estación Central", "Huechuraba", "Independencia", "Isla de Maipo", "La Cisterna", "La Florida", "La Granja", "La Pintana", "La Reina", "Lampa", "Las Condes", "Lo Barnechea", "Lo Espejo", "Lo Prado", "Macul", "Maipú", "María Pinto", "Melipilla", "Ñuñoa", "Padre Hurtado", "Paine", "Pedro Aguirre Cerda", "Peñaflor", "Peñalolén", "Pirque", "Providencia", "Pudahuel", "Puente Alto", "Quilicura", "Quinta Normal", "Recoleta", "Renca", "San Bernardo", "San José de Maipo", "San Miguel", "San Ramón", "Santiago", "Talagante", "Tiltil", "Vitacura"], "O'Higgins": ["Codegua", "Coinco", "Coltauco", "Doñihue", "Graneros", "Las Cabras", "Machalí", "Malloa", "Mostazal", "Olivar", "Peumo", "Pichidegua", "Quinta de Tilcoco", "Rancagua", "Rengo", "Requínoa", "San Vicente", "Chépica", "Chimbarongo", "Lolol", "Nancagua", "Palmilla", "Peralillo", "Placilla", "Pumanque", "San Fernando", "Santa Cruz"], "Maule": ["Cauquenes", "Chanco", "Pelluhue", "Curicó", "Hualañé", "Licantén", "Molina", "Rauco", "Romeral", "Sagrada Familia", "Teno", "Vichuquén", "Linares", "Colbún", "Longaví", "Parral", "Retiro", "San Javier", "Villa Alegre", "Yerbas Buenas", "Constitución", "Curepto", "Empedrado", "Maule", "Pelarco", "Pencahue", "Río Claro", "San Clemente", "San Rafael", "Talca"], "Ñuble": ["Bulnes", "Chillán", "Chillán Viejo", "El Carmen", "Pemuco", "Pinto", "Quillón", "San Ignacio", "Yungay", "Coihueco", "Ñiquén", "San Carlos", "San Fabián", "San Nicolás", "Cobquecura", "Coelemu", "Ninhue", "Portezuelo", "Quirihue", "Ránquil", "Treguaco"], "Biobío": ["Concepción", "Coronel", "Chiguayante", "Florida", "Hualqui", "Lota", "Penco", "San Pedro de la Paz", "Santa Juana", "Talcahuano", "Tomé", "Hualpén", "Lebu", "Arauco", "Cañete", "Contulmo", "Curanilahue", "Los Álamos", "Tirúa", "Los Ángeles", "Antuco", "Cabrero", "Laja", "Mulchén", "Nacimiento", "Negrete", "Quilaco", "Quilleco", "San Rosendo", "Santa Bárbara", "Tucapel", "Yumbel", "Alto Biobío"], "La Araucanía": ["Temuco", "Carahue", "Cunco", "Curarrehue", "Freire", "Galvarino", "Gorbea", "Lautaro", "Loncoche", "Melipeuco", "Nueva Imperial", "Padre las Casas", "Perquenco", "Pitrufquén", "Pucón", "Saavedra", "Teodoro Schmidt", "Toltén", "Vilcún", "Villarrica", "Cholchol", "Angol", "Collipulli", "Curacautín", "Ercilla", "Lonquimay", "Los Sauces", "Lumaco", "Purén", "Renaico", "Traiguén", "Victoria"], "Los Ríos": ["Valdivia", "Corral", "Futrono", "La Unión", "Lago Ranco", "Lanco", "Los Lagos", "Máfil", "Mariquina", "Paillaco", "Panguipulli", "Río Bueno"], "Los Lagos": ["Puerto Montt", "Calbuco", "Cochamó", "Fresia", "Frutillar", "Los Muermos", "Llanquihue", "Maullín", "Puerto Varas", "Castro", "Ancud", "Chonchi", "Curaco de Vélez", "Dalcahue", "Puqueldón", "Queilén", "Quellón", "Quemchi", "Quinchao", "Osorno", "Puerto Octay", "Purranque", "Puyehue", "Río Negro", "San Juan de la Costa", "San Pablo", "Chaitén", "Futaleufú", "Hualaihué", "Palena"], "Aysén": ["Coyhaique", "Lago Verde", "Aysén", "Cisnes", "Guaitecas", "Chile Chico", "Río Ibáñez", "Cochrane", "O'Higgins", "Tortel"], "Magallanes": ["Punta Arenas", "Laguna Blanca", "Río Verde", "San Gregorio", "Cabo de Hornos", "Antártica", "Porvenir", "Primavera", "Timaukel", "Natales", "Torres del Paine"]};
 var DIST={'Valparaíso':0,'Viña del Mar':8,'Quilpué':18,'Villa Alemana':24,'Concón':15,'Puchuncaví':30,'Quintero':35,'Casablanca':45,'San Antonio':100,'Cartagena':95,'El Quisco':110,'El Tabo':105,'Algarrobo':90,'Santo Domingo':115,'Quillota':55,'La Calera':60,'La Cruz':58,'Nogales':70,'Limache':40,'Olmué':48,'Hijuelas':65,'Los Andes':90,'San Felipe':95,'Calle Larga':88,'Rinconada':92,'Santa María':100,'La Ligua':140,'Petorca':150,'Zapallar':130,'Papudo':135,'Cabildo':120};
 
-var user=null,col={},pubs=[],tab='col',q='',figData=null,selFigs=[],filt='all',chatTarget=null,allPubs=[],readConvs={};
+var user=null,col={},pubs=[],tab='col',q='',figData=null,selFigs=[],filt='all',chatTarget=null,allPubs=[],readConvs={},soloFaltan=false;
 
 // ===== UTILS =====
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
@@ -629,6 +633,7 @@ async function init(){
 // ===== TABS =====
 function goTab(t){
   tab=t;
+  if(t!=='col')soloFaltan=false; // reset filter when leaving collection
   ['col','int','msg','usr'].forEach(function(x){document.getElementById('t-'+x).classList.remove('active');});
   document.getElementById('t-'+t).classList.add('active');
   var c=document.getElementById('content');
@@ -676,8 +681,11 @@ function renderCol(){
     +'<div class="ley-i"><div class="ley-b rp"></div>Repetida ×</div>'
     +'<div class="ley-i"><div class="ley-b f"></div>Foil</div>'
     +'</div>'
+    +'<div class="col-filter-row">'
     +'<div class="search-wrap"><span class="search-ico">🔍</span>'
     +'<input class="search-inp" id="s-inp" placeholder="Buscar jugador o código..." value="'+q.replace(/"/g,'&quot;')+'" oninput="doSearch(this.value)">'
+    +'</div>'
+    +'<button class="btn-faltan'+(soloFaltan?' on':'')+'" onclick="toggleFaltan()">❌ Me faltan</button>'
     +'</div>';
 
   var GRUPOS=[
@@ -702,7 +710,10 @@ function renderCol(){
   function renderSec(s){
     if(!s)return'';
     var qUp=q.toUpperCase().replace(/\s/g,'');
-    var figs=q?s.figs.filter(function(f){
+    var figs=s.figs.filter(function(f){
+      // Filter "me faltan" - only show stickers not owned
+      if(soloFaltan&&(col[f.code]==='tengo'||col[f.code]==='repetida'))return false;
+      if(!q)return true;
       if(f.nom.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
       if(s.nombre.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
       if(f.code.toUpperCase().indexOf(qUp)>=0)return true;
@@ -710,7 +721,7 @@ function renderCol(){
       var qStrip=qUp.replace(/0+(\d+)$/,'$1');
       if(cStrip.indexOf(qStrip)>=0)return true;
       return false;
-    }):s.figs;
+    });
     if(!figs.length)return'';
     var st=s.figs.filter(function(f){return col[f.code]==='tengo'||col[f.code]==='repetida';}).length;
     var o='<div class="sec-title"><div class="sec-left"><span>'+s.bandera+'</span>'+s.nombre+'</div>'
@@ -752,6 +763,12 @@ function doSearch(v){
   document.getElementById('content').innerHTML=renderCol();
   var el=document.getElementById('s-inp');
   if(el){el.focus();el.setSelectionRange(v.length,v.length);}
+}
+function toggleFaltan(){
+  soloFaltan=!soloFaltan;
+  document.getElementById('content').innerHTML=renderCol();
+  // Restore search input focus if there was a query
+  if(q){var el=document.getElementById('s-inp');if(el){el.focus();el.setSelectionRange(q.length,q.length);}}
 }
 
 // ===== PANEL =====
