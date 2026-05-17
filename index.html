@@ -1022,17 +1022,12 @@ async function openChat(uid,nombre){
   setTimeout(function(){document.getElementById('chat-inp').focus();},100);
 }
 function fmtHora(iso){
-  // Supabase stores UTC, convert to Chile time (UTC-4 winter, UTC-3 summer)
   var d=new Date(iso);
-  try{
-    return d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',timeZone:'America/Santiago'});
-  }catch(e){
-    // Fallback: manual UTC-4 offset
-    var ch=new Date(d.getTime()-4*60*60*1000);
-    var hh=ch.getUTCHours().toString().padStart(2,'0');
-    var mm=ch.getUTCMinutes().toString().padStart(2,'0');
-    return hh+':'+mm;
-  }
+  // Use browser's local timezone - it's already set to Chile on Chilean devices
+  // This ensures consistency between sent and received messages
+  var hh=d.getHours().toString().padStart(2,'0');
+  var mm=d.getMinutes().toString().padStart(2,'0');
+  return hh+':'+mm;
 }
 function renderChatMsgs(msgs){
   var list=document.getElementById('chat-msgs');
