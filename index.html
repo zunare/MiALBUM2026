@@ -945,7 +945,7 @@ async function loadMsgs(){
     var nm=((p&&p.nombre)?p.nombre+' '+(p.apellido||''):'Usuario');
     var last=cv.msgs[0];var esYo=last&&last.de_user_id===user.id;
     var ltxt=last?(esYo?'Tú: ':'')+last.texto:'';if(ltxt.length>42)ltxt=ltxt.slice(0,42)+'...';
-    var hora=last?new Date(last.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'';
+    var hora=last?new Date(last.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',timeZone:'America/Santiago'}):'';
     var eid=encodeURIComponent(pid);var enm=encodeURIComponent(nm);
     var isUnread=cv.unread>0&&!readConvs[pid];
     h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">'
@@ -1024,7 +1024,7 @@ async function openChat(uid,nombre){
 function renderChatMsgs(msgs){
   var list=document.getElementById('chat-msgs');
   if(!msgs.length){list.innerHTML='<div style="text-align:center;padding:1.4rem;color:var(--txt2);font-size:.8rem">¡Inicia la conversación! 👋</div>';return;}
-  list.innerHTML=msgs.map(function(m){var esYo=m.de_user_id===user.id;var h=new Date(m.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});return'<div class="msg '+(esYo?'yo':'otro')+'">'+m.texto+'<div class="msg-time">'+h+'</div></div>';}).join('');
+  list.innerHTML=msgs.map(function(m){var esYo=m.de_user_id===user.id;var h=new Date(m.hora).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',timeZone:'America/Santiago'});return'<div class="msg '+(esYo?'yo':'otro')+'">'+m.texto+'<div class="msg-time">'+h+'</div></div>';}).join('');
   list.scrollTop=list.scrollHeight;
 }
 function closeChat(){document.getElementById('chat-ov').classList.remove('open');}
@@ -1032,7 +1032,7 @@ async function sendMsg(){
   var inp=document.getElementById('chat-inp');var txt=inp.value.trim();
   if(!txt||!chatTarget)return;inp.value='';
   var res=await sb.from('mensajes').insert({de_user_id:user.id,para_user_id:chatTarget.uid,texto:txt,leido:false}).select();
-  if(res.data&&res.data.length){var list=document.getElementById('chat-msgs');var h=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+h+'</div></div>';list.scrollTop=list.scrollHeight;}
+  if(res.data&&res.data.length){var list=document.getElementById('chat-msgs');var h=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',timeZone:'America/Santiago'});list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+h+'</div></div>';list.scrollTop=list.scrollHeight;}
 }
 
 // ===== USUARIO =====
