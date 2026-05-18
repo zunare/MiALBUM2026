@@ -190,6 +190,11 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .figs-pub{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.6rem}
 .fig-pill{display:flex;align-items:center;gap:.2rem;background:#f0f4ff;border-radius:7px;padding:.2rem .5rem;font-size:.68rem;font-weight:700;color:var(--azul);border:1.5px solid #c0d0f0}
 .fig-pill.f{background:#f0e8ff;border-color:#c0a0f0;color:#6a0dad}
+.fig-pill.sirve{background:#e8f8ee;border-color:#6fcf97;color:#1a6b30;font-weight:800}
+.fig-pill.sirve.f{background:#f0e8ff;border-color:#9b59b6;color:#6a0dad}
+.te-sirven{background:#e8f8ee;border:1.5px solid #6fcf97;border-radius:10px;padding:.5rem .6rem;margin-bottom:.55rem}
+.te-sirven-lbl{font-size:.72rem;font-weight:800;color:#1a6b30;display:block;margin-bottom:.35rem}
+.te-sirven .fig-pill{background:#fff;border-color:#6fcf97}
 .pub-acts{display:flex;gap:.45rem}
 .amsg{flex:1;padding:.45rem;border-radius:10px;border:none;cursor:pointer;font-family:var(--ff);font-size:.76rem;font-weight:700}
 .amsg-m{background:var(--verde);color:#fff}
@@ -869,6 +874,7 @@ function renderInt(allFigs){
   h+='</div>';
   h+='<div class="filtros">'
     +'<button class="filt'+(filt==='all'?' on':'')+'" data-f="all" onclick="setFilt(this.dataset.f)">Todos</button>'
+    +'<button class="filt'+(filt==='me_sirve'?' on':'')+'" data-f="me_sirve" onclick="setFilt(this.dataset.f)">✅ Me sirven</button>'
     +'<button class="filt'+(filt==='near'?' on':'')+'" data-f="near" onclick="setFilt(this.dataset.f)">📍 Cerca</button>'
     +'<button class="filt'+(filt==='foil'?' on':'')+'" data-f="foil" onclick="setFilt(this.dataset.f)">⭐ Especiales</button>'
     +'<button class="filt'+(filt==='sur'?' on':'')+'" data-f="sur" onclick="setFilt(this.dataset.f)">🌎 Sudamérica</button>'
@@ -879,6 +885,7 @@ function renderInt(allFigs){
   if(filt==='near')todos=todos.filter(function(u){return dist(user.comuna,(u.p&&u.p.comuna)||'')<=40;});
   if(filt==='foil')todos=todos.filter(function(u){return u.reps.some(function(r){return r.tipo==='foil';});});
   if(filt==='sur')todos=todos.filter(function(u){return u.reps.some(function(r){return SURAM.indexOf(r.pais)>=0;});});
+  if(filt==='me_sirve')todos=todos.filter(function(u){return u.reps.some(function(r){return !col[r.code];});});
   if(!todos.length){h+='<div class="empty-st"><span class="empty-ico">🔍</span>No hay publicaciones con ese filtro</div>';return h;}
   todos.forEach(function(u){
     var p=u.p||{};var com=p.comuna||'';
@@ -892,8 +899,19 @@ function renderInt(allFigs){
       +'<div><div class="pub-nm">'+fn+'</div>'
       +'<div class="pub-loc">📍 '+com+'&nbsp;<span class="dist'+(near?' near':'')+'">'+(isMe?'Tú':ds)+'</span></div>'
       +'</div></div><div class="figs-pub">';
-    u.reps.forEach(function(r){h+='<div class="fig-pill'+(r.tipo==='foil'?' f':'')+'">'+( r.tipo==='foil'?'⭐':'')+' '+r.code+' '+r.nom+'</div>';});
+    u.reps.forEach(function(r){
+      var sirve=!col[r.code];
+      h+='<div class="fig-pill'+(r.tipo==='foil'?' f':'')+(sirve?' sirve':'')+'">'+(r.tipo==='foil'?'⭐':'')+' '+r.code+'</div>';
+    });
     h+='</div>';
+    var tesSirven=u.reps.filter(function(r){return !col[r.code];});
+    if(!isMe&&tesSirven.length>0){
+      h+='<div class="te-sirven"><span class="te-sirven-lbl">✅ Te sirven ('+tesSirven.length+'):</span>';
+      tesSirven.forEach(function(r){h+='<div class="fig-pill sirve'+(r.tipo==='foil'?' f':'')+'">'+( r.tipo==='foil'?'⭐':'')+' '+r.code+' <span style="font-weight:400;opacity:.75">'+r.nom+'</span></div>';});
+      h+='</div>';
+    } else if(!isMe&&tesSirven.length===0){
+      h+='<div style="font-size:.72rem;color:var(--txt2);margin-bottom:.5rem;padding:.3rem .5rem;background:#f8f9fe;border-radius:6px">😕 Ninguna te sirve</div>';
+    }
     if(!isMe){h+='<div class="pub-acts">'
       +'<button class="amsg amsg-m" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">💬 Mensaje</button>'
       +'<button class="amsg amsg-s" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">🔄 Proponer cambio</button>'
