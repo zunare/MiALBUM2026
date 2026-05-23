@@ -541,6 +541,10 @@ async function doReg(){
       }
     });
     if(res.error){showErr('reg-err',res.error.message);setBusy('btn-reg',false,'CREAR CUENTA ⚽');return;}
+    if(!res.data||!res.data.user){
+      showErr('reg-err','Este email ya está registrado. Intenta iniciar sesión.');
+      setBusy('btn-reg',false,'CREAR CUENTA ⚽');return;
+    }
     var uid=res.data.user.id;
     // Try upsert - works if confirm email is OFF (session exists)
     var profRes=await sb.from('profiles').upsert({id:uid,nombre:nom,apellido:ape,dob:dob,region:reg,comuna:com,avatar:mkAv(nom,ape),color:mkCol(nom+ape)});
