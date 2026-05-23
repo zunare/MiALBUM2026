@@ -335,10 +335,127 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .sel-chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem;min-height:28px}
 .sel-chip{display:flex;align-items:center;gap:.3rem;background:#e8f0ff;border-radius:20px;padding:.2rem .55rem .2rem .3rem;font-size:.72rem;font-weight:700;color:var(--azul)}
 .sel-chip .rm{cursor:pointer;opacity:.55;font-size:.8rem;margin-left:.1rem}
+
+/* ===== LANDING PAGE ===== */
+#landing{display:none;flex-direction:column;min-height:100vh;background:linear-gradient(135deg,#050e24 0%,#1a3a8a 60%,#0d2060 100%)}
+.land-hero{padding:2.5rem 1.5rem 2rem;text-align:center;color:#fff}
+.land-logo{font-weight:900;font-size:2.8rem;letter-spacing:2px;margin-bottom:.3rem}
+.land-logo span{color:var(--oro)}
+.land-tagline{font-size:.9rem;color:rgba(255,255,255,.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5rem}
+.land-desc{font-size:1rem;color:rgba(255,255,255,.85);line-height:1.7;max-width:400px;margin:0 auto 1.8rem}
+.land-stats{display:flex;justify-content:center;gap:2rem;margin-bottom:2rem}
+.land-stat{text-align:center}
+.land-stat-n{font-size:1.8rem;font-weight:900;color:var(--oro)}
+.land-stat-l{font-size:.68rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px}
+.land-btns{display:flex;flex-direction:column;gap:.7rem;max-width:320px;margin:0 auto}
+.land-btn-main{padding:.85rem;background:linear-gradient(135deg,var(--verde),var(--verde2));color:#fff;border:none;border-radius:14px;font-family:var(--ff);font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.4px;box-shadow:0 4px 20px rgba(26,138,58,.4)}
+.land-btn-sec{padding:.75rem;background:rgba(255,255,255,.1);color:#fff;border:2px solid rgba(255,255,255,.25);border-radius:14px;font-family:var(--ff);font-size:.9rem;font-weight:700;cursor:pointer}
+.land-features{background:rgba(255,255,255,.06);backdrop-filter:blur(10px);padding:2rem 1.5rem;margin:.5rem}
+.land-features{border-radius:20px}
+.land-feat-title{color:#fff;font-weight:800;font-size:1rem;text-align:center;margin-bottom:1.2rem}
+.land-feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.land-feat{background:rgba(255,255,255,.08);border-radius:14px;padding:.9rem;text-align:center}
+.land-feat-ico{font-size:1.8rem;display:block;margin-bottom:.4rem}
+.land-feat-nm{font-size:.78rem;font-weight:700;color:#fff;margin-bottom:.2rem}
+.land-feat-desc{font-size:.68rem;color:rgba(255,255,255,.55);line-height:1.4}
+.land-groups{padding:1.5rem;color:#fff}
+.land-groups h3{font-weight:800;font-size:.95rem;text-align:center;margin-bottom:1rem;color:rgba(255,255,255,.8)}
+.land-groups-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+.land-group{background:rgba(255,255,255,.07);border-radius:10px;padding:.6rem .4rem;text-align:center}
+.land-group-lbl{font-size:.65rem;font-weight:800;color:var(--oro);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem}
+.land-group-teams{font-size:.6rem;color:rgba(255,255,255,.6);line-height:1.5}
+.land-footer{padding:1.5rem;text-align:center;color:rgba(255,255,255,.35);font-size:.7rem}
+.land-footer a{color:rgba(255,255,255,.45);text-decoration:none}
 </style>
 </head>
 <body>
 
+
+<div id="landing">
+  <div class="land-hero">
+    <div class="land-logo">Mi<span>ALBUM</span> 2026</div>
+    <div class="land-tagline">FIFA World Cup 2026 — Chile</div>
+    <div class="land-desc">
+      La app para coleccionistas del álbum Panini del Mundial 2026. 
+      Registra tu colección, encuentra repetidas y haz intercambios 
+      con coleccionistas de todo Chile.
+    </div>
+    <div class="land-stats">
+      <div class="land-stat">
+        <div class="land-stat-n">994</div>
+        <div class="land-stat-l">Figuritas</div>
+      </div>
+      <div class="land-stat">
+        <div class="land-stat-n">48</div>
+        <div class="land-stat-l">Selecciones</div>
+      </div>
+      <div class="land-stat">
+        <div class="land-stat-n">12</div>
+        <div class="land-stat-l">Grupos</div>
+      </div>
+    </div>
+    <div class="land-btns">
+      <button class="land-btn-main" onclick="showLogin('reg')">⚽ Crear cuenta gratis</button>
+      <button class="land-btn-sec" onclick="showLogin('log')">Ya tengo cuenta — Iniciar sesión</button>
+    </div>
+  </div>
+
+  <div style="padding:0 1rem 1rem">
+    <div class="land-features">
+      <div class="land-feat-title">¿Qué puedes hacer?</div>
+      <div class="land-feat-grid">
+        <div class="land-feat">
+          <span class="land-feat-ico">📚</span>
+          <div class="land-feat-nm">Tu Colección</div>
+          <div class="land-feat-desc">Marca las láminas que tienes y las que te faltan</div>
+        </div>
+        <div class="land-feat">
+          <span class="land-feat-ico">🔄</span>
+          <div class="land-feat-nm">Intercambios</div>
+          <div class="land-feat-desc">Publica tus repetidas y encuentra lo que necesitas</div>
+        </div>
+        <div class="land-feat">
+          <span class="land-feat-ico">💬</span>
+          <div class="land-feat-nm">Chat directo</div>
+          <div class="land-feat-desc">Coordina intercambios con otros coleccionistas</div>
+        </div>
+        <div class="land-feat">
+          <span class="land-feat-ico">📍</span>
+          <div class="land-feat-nm">Por región</div>
+          <div class="land-feat-desc">Encuentra coleccionistas cerca de ti en Chile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="land-groups">
+    <h3>🌍 Los 12 grupos del Mundial 2026</h3>
+    <div class="land-groups-grid">
+      <div class="land-group"><div class="land-group-lbl">Grupo A</div><div class="land-group-teams">México · Sudáfrica · Corea del Sur · Chequia</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo B</div><div class="land-group-teams">Canadá · Bosnia · Qatar · Suiza</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo C</div><div class="land-group-teams">Brasil · Marruecos · Haití · Escocia</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo D</div><div class="land-group-teams">EE.UU. · Paraguay · Australia · Turquía</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo E</div><div class="land-group-teams">Alemania · Curaçao · C. de Marfil · Ecuador</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo F</div><div class="land-group-teams">P. Bajos · Japón · Suecia · Túnez</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo G</div><div class="land-group-teams">Bélgica · Egipto · Irán · Nueva Zelanda</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo H</div><div class="land-group-teams">España · Cabo Verde · Arabia S. · Uruguay</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo I</div><div class="land-group-teams">Francia · Senegal · Irak · Noruega</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo J</div><div class="land-group-teams">Argentina · Argelia · Austria · Jordania</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo K</div><div class="land-group-teams">Portugal · Congo DR · Uzbekistán · Colombia</div></div>
+      <div class="land-group"><div class="land-group-lbl">Grupo L</div><div class="land-group-teams">Inglaterra · Croacia · Ghana · Panamá</div></div>
+    </div>
+  </div>
+
+  <div class="land-footer">
+    <p>MiALBUM 2026 no tiene afiliación con Panini S.p.A. ni con FIFA.</p>
+    <p style="margin-top:.4rem">
+      <a onclick="showLogin('reg')">Registro</a> · 
+      <a onclick="openModal('m-tyc')">Términos</a> · 
+      <a onclick="openModal('m-priv')">Privacidad</a> · 
+      <a href="mailto:contacto.mialbum2026@gmail.com">Contacto</a>
+    </p>
+  </div>
+</div>
 <div class="hdr-bg-fix"></div>
 <div id="loading">
   <div class="logo">Mi<span>ALBUM</span> 2026</div>
@@ -569,6 +686,12 @@ function closeModal(id){document.getElementById(id).classList.remove('open');doc
 document.addEventListener('click',function(e){if(e.target.classList.contains('modal-ov'))closeModal(e.target.id);});
 
 // ===== AUTH TABS =====
+
+function showLogin(tab){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('login').style.display='flex';
+  showTab(tab||'reg');
+}
 function showTab(t){
   document.getElementById('form-reg').style.display=t==='reg'?'block':'none';
   document.getElementById('form-log').style.display=t==='log'?'block':'none';
@@ -704,8 +827,8 @@ async function init(){
     clearTimeout(timer);
     var sess=sr.data&&sr.data.session;
     if(sess&&sess.user){await loadUser(sess.user);}
-    else{document.getElementById('loading').style.display='none';document.getElementById('login').style.display='flex';}
-  }catch(e){clearTimeout(timer);document.getElementById('loading').style.display='none';document.getElementById('login').style.display='flex';}
+    else{document.getElementById('loading').style.display='none';document.getElementById('landing').style.display='flex';}
+  }catch(e){clearTimeout(timer);document.getElementById('loading').style.display='none';document.getElementById('landing').style.display='flex';}
 }
 
 // ===== TABS =====
@@ -1454,7 +1577,7 @@ async function logout(){
   await sb.auth.signOut();
   user=null;col={};pubs=[];selFigs=[];q='';filt='all';allPubs=[];chatTarget=null;
   document.getElementById('app').style.display='none';
-  document.getElementById('login').style.display='flex';
+  document.getElementById('landing').style.display='flex';
 }
 
 function removeFabs(){
