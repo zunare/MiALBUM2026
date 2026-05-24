@@ -680,6 +680,14 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
     <button class="pbtn pbtn-r" id="p-rep" onclick="markFig('repetida')"><span class="pico">🔁</span>Repetida</button>
     <button class="pbtn pbtn-q" onclick="markFig(null)"><span class="pico">🗑️</span>Quitar</button>
   </div>
+  <div id="p-cantidad-wrap" style="display:none;margin-top:.7rem;align-items:center;justify-content:center;gap:.6rem">
+    <span style="font-size:.78rem;font-weight:700;color:var(--txt2)">¿Cuántas repetidas tienes?</span>
+    <div style="display:flex;align-items:center;gap:.4rem">
+      <button onclick="changeCantidad(-1)" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--borde);background:var(--bg);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800">−</button>
+      <span id="p-cantidad" style="font-size:1.1rem;font-weight:800;color:var(--azul);min-width:20px;text-align:center">1</span>
+      <button onclick="changeCantidad(1)" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--borde);background:var(--bg);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800">+</button>
+    </div>
+  </div>
 </div>
 
 <!-- CHAT -->
@@ -901,7 +909,7 @@ async function loadUser(authUser){
   }
   user=pr.data;
   var cr=await sb.from('coleccion').select('sticker_code,estado').eq('user_id',user.id);
-  col={};if(cr.data)cr.data.forEach(function(r){col[r.sticker_code]=r.estado;});
+  col={};if(cr.data)cr.data.forEach(function(r){col[r.sticker_code]={estado:r.estado,cantidad:r.cantidad||1};});
   var pbr=await sb.from('publicaciones').select('sticker_code').eq('user_id',user.id);
   pubs=pbr.data?pbr.data.map(function(r){return r.sticker_code;}):[]; 
   document.getElementById('loading').style.display='none';
@@ -952,6 +960,8 @@ function goTab(t){
 }
 
 // ===== COLECCION =====
+function getEst(code){return col[code]?col[code].estado:'';}
+function getCant(code){return col[code]?col[code].cantidad||1:1;}
 function getFigCls(fig,estado){
   var cls='fig';
   if(estado==='tengo')cls+=' tengo';
@@ -963,8 +973,10 @@ function getFigCls(fig,estado){
 function countTengo(){
   var t=0,r=0,keys=Object.keys(col);
   for(var i=0;i<keys.length;i++){
-    if(col[keys[i]]==='tengo')t++;
-    else if(col[keys[i]]==='repetida'){t++;r++;}
+    var est=col[keys[i]]?col[keys[i]].estado:'';
+    var cant=col[keys[i]]?col[keys[i]].cantidad||1:1;
+    if(est==='tengo')t++;
+    else if(est==='repetida'){t++;r+=cant;}
   }
   return{t:t,r:r};
 }
@@ -973,7 +985,7 @@ function renderCol(){
   var cn=countTengo();
   var total=S.reduce(function(a,s){return a+s.figs.length;},0);
   var pct=total>0?Math.round((cn.t/total)*100):0;
-  var foils=0;S.forEach(function(s){s.figs.forEach(function(f){if(f.type==='foil'&&(col[f.code]==='tengo'||col[f.code]==='repetida'))foils++;});});
+  var foils=0;S.forEach(function(s){s.figs.forEach(function(f){if(f.type==='foil'&&(getEst(f.code)==='tengo'||getEst(f.code)==='repetida'))foils++;});});
 
   var h='<div class="stats">'
     +'<div class="stat"><div class="stat-n">'+total+'</div><div class="stat-l">Total</div></div>'
@@ -1020,7 +1032,7 @@ function renderCol(){
     var qUp=q.toUpperCase().replace(/\s/g,'');
     var figs=s.figs.filter(function(f){
       // Filter "me faltan" - only show stickers not owned
-      if(soloFaltan&&(col[f.code]==='tengo'||col[f.code]==='repetida'))return false;
+      if(soloFaltan&&(getEst(f.code)==='tengo'||getEst(f.code)==='repetida'))return false;
       if(!q)return true;
       if(f.nom.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
       if(s.nombre.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
@@ -1031,12 +1043,12 @@ function renderCol(){
       return false;
     });
     if(!figs.length)return'';
-    var st=s.figs.filter(function(f){return col[f.code]==='tengo'||col[f.code]==='repetida';}).length;
+    var st=s.figs.filter(function(f){return getEst(f.code)==='tengo'||getEst(f.code)==='repetida';}).length;
     var o='<div class="sec-title"><div class="sec-left"><span>'+s.bandera+'</span>'+s.nombre+'</div>'
       +'<span class="sec-prog" data-sid="'+s.id+'">'+st+'/'+s.figs.length+'</span></div>'
       +'<div class="fig-grid">';
     figs.forEach(function(f){
-      var est=col[f.code]||'';
+      var est=getEst(f.code);
       var cls=getFigCls(f,est);
       var dn=f.nom.replace(/"/g,'&quot;');
       var ds=s.nombre.replace(/"/g,'&quot;');
@@ -1096,15 +1108,21 @@ function closePanel(){
 }
 function updatePanelBtns(){
   if(!figData)return;
-  var est=col[figData.code]||'';
+  var est=getEst(figData.code);
+  var cant=getCant(figData.code);
   document.getElementById('p-tengo').classList.toggle('on',est==='tengo'||est==='repetida');
   document.getElementById('p-rep').classList.toggle('on',est==='repetida');
+  var wrap=document.getElementById('p-cantidad-wrap');
+  var cantEl=document.getElementById('p-cantidad');
+  if(wrap){wrap.style.display=est==='repetida'?'flex':'none';}
+  if(cantEl&&est==='repetida')cantEl.textContent=cant;
 }
 
 async function markFig(estado){
   if(!figData)return;
   var code=figData.code;
-  var prev=col[code]||'';
+  var prev=getEst(code);
+  var prevCant=getCant(code);
   // Toggle logic
   if(estado==='tengo'&&prev==='tengo'){estado=null;}
   else if(estado==='tengo'&&prev==='repetida'){estado='tengo';}
@@ -1115,8 +1133,9 @@ async function markFig(estado){
     await sb.from('coleccion').delete().eq('user_id',user.id).eq('sticker_code',code);
     toast(figData.nom+' → quitada');
   }else{
-    col[code]=estado;
-    await sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:estado},{onConflict:'user_id,sticker_code'});
+    var cant=estado==='repetida'?(col[code]?col[code].cantidad||1:1):1;
+    col[code]={estado:estado,cantidad:cant};
+    await sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:estado,cantidad:cant},{onConflict:'user_id,sticker_code'});
     toast((estado==='tengo'?'✅ ':'🔁 ')+figData.nom+' → '+(estado==='tengo'?'Tengo':'Repetida'));
   }
   // Update panel buttons
@@ -1130,7 +1149,7 @@ async function markFig(estado){
   S.forEach(function(s){
     var hasFig=s.figs.some(function(f){return f.code===code;});
     if(hasFig){
-      var st=s.figs.filter(function(f){return col[f.code]==='tengo'||col[f.code]==='repetida';}).length;
+      var st=s.figs.filter(function(f){return getEst(f.code)==='tengo'||getEst(f.code)==='repetida';}).length;
       var sp=document.querySelector('.sec-prog[data-sid="'+s.id+'"]');
       if(sp)sp.textContent=st+'/'+s.figs.length;
     }
@@ -1145,22 +1164,40 @@ function updateCounters(){
   var er=document.getElementById('cnt-r');if(er)er.textContent=cn.r;
   var bar=document.getElementById('pb-bar');if(bar)bar.style.width=pct+'%';
   var txt=document.getElementById('pb-txt');if(txt)txt.textContent=pct+'% completado — '+(total-cn.t)+' restantes';
-  var foils=0;S.forEach(function(s){s.figs.forEach(function(f){if(f.type==='foil'&&(col[f.code]==='tengo'||col[f.code]==='repetida'))foils++;});});
+  var foils=0;S.forEach(function(s){s.figs.forEach(function(f){if(f.type==='foil'&&(getEst(f.code)==='tengo'||getEst(f.code)==='repetida'))foils++;});});
   var ef=document.getElementById('cnt-f');if(ef)ef.textContent=foils;
 }
 
 // ===== INTERCAMBIOS =====
 async function loadInt(){
   var allFigs=[];S.forEach(function(s){s.figs.forEach(function(f){allFigs.push({code:f.code,nom:f.nom,type:f.type,pais:s.nombre,ban:s.bandera});});});
-  var res=await sb.from('publicaciones').select('sticker_code,user_id,profiles(id,nombre,apellido,comuna,region,avatar,color)').neq('user_id',user.id);
+  // Fetch ALL publications using pagination to bypass 1000 row limit
+  var allRows=[];
+  var from=0;var pageSize=1000;
+  while(true){
+    var res=await sb.from('publicaciones')
+      .select('sticker_code,user_id,cantidad,profiles(id,nombre,apellido,comuna,region,avatar,color,foto_url)')
+      .neq('user_id',user.id)
+      .range(from,from+pageSize-1);
+    if(res.data&&res.data.length>0){
+      allRows=allRows.concat(res.data);
+      if(res.data.length<pageSize)break;
+      from+=pageSize;
+    }else{break;}
+  }
   var pm={};
-  if(res.data){res.data.forEach(function(r){var uid=r.user_id;if(!pm[uid])pm[uid]={uid:uid,p:r.profiles,reps:[]};var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===r.sticker_code){f=allFigs[i];break;}}if(f)pm[uid].reps.push({code:r.sticker_code,nom:f.nom,tipo:f.type,pais:f.pais});});}
+  allRows.forEach(function(r){
+    var uid=r.user_id;
+    if(!pm[uid])pm[uid]={uid:uid,p:r.profiles,reps:[]};
+    var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===r.sticker_code){f=allFigs[i];break;}}
+    if(f)pm[uid].reps.push({code:r.sticker_code,nom:f.nom,tipo:f.type,pais:f.pais,cantidad:r.cantidad||1});
+  });
   allPubs=Object.values(pm);
   document.getElementById('content').innerHTML=renderInt(allFigs);
 }
 
 function renderInt(allFigs){
-  var misRep=Object.keys(col).filter(function(c){return col[c]==='repetida';});
+  var misRep=Object.keys(col).filter(function(c){return getEst(c)==='repetida';});
   var h='<div class="pub-form"><h3>📤 PUBLICAR MIS REPETIDAS</h3>';
   if(!misRep.length){h+='<div style="font-size:.79rem;color:var(--txt2);text-align:center;padding:.38rem">Sin repetidas aún. Marca figuritas con 🔁 en Mi Colección.</div>';}
   else{
@@ -1188,7 +1225,7 @@ function renderInt(allFigs){
   if(filt==='near')todos=todos.filter(function(u){return dist(user.comuna,(u.p&&u.p.comuna)||'')<=40;});
   if(filt==='foil')todos=todos.filter(function(u){return u.reps.some(function(r){return r.tipo==='foil';});});
   if(filt==='sur')todos=todos.filter(function(u){return u.reps.some(function(r){return SURAM.indexOf(r.pais)>=0;});});
-  if(filt==='me_sirve')todos=todos.filter(function(u){return u.reps.some(function(r){return !col[r.code];});});
+  if(filt==='me_sirve')todos=todos.filter(function(u){return u.reps.some(function(r){return !getEst(r.code);});});
   if(intQ){
     var iqUp=intQ.toUpperCase().replace(/\s/g,'');
     var iqLow=intQ.toLowerCase();
@@ -1213,10 +1250,11 @@ function renderInt(allFigs){
       +'</div></div><div class="figs-pub">';
     u.reps.forEach(function(r){
       var sirve=!col[r.code];
-      h+='<div class="fig-pill'+(r.tipo==='foil'?' f':'')+(sirve?' sirve':'')+'">'+(r.tipo==='foil'?'⭐':'')+' '+r.code+'</div>';
+      var cantBadge=r.cantidad>1?'<span style="background:'+(sirve?'#1a6b30':'var(--azul)')+';color:#fff;border-radius:8px;padding:.05rem .35rem;font-size:.6rem;margin-left:.2rem;font-weight:800">x'+r.cantidad+'</span>':'';
+      h+='<div class="fig-pill'+(r.tipo==='foil'?' f':'')+(sirve?' sirve':'')+'">'+(r.tipo==='foil'?'⭐':'')+' '+r.code+cantBadge+'</div>';
     });
     h+='</div>';
-    var tesSirven=u.reps.filter(function(r){return !col[r.code];});
+    var tesSirven=u.reps.filter(function(r){return !getEst(r.code);});
     if(!isMe&&tesSirven.length>0){
       h+='<div class="te-sirven"><span class="te-sirven-lbl">✅ Te sirven ('+tesSirven.length+'):</span>';
       tesSirven.forEach(function(r){h+='<div class="fig-pill sirve'+(r.tipo==='foil'?' f':'')+'">'+( r.tipo==='foil'?'⭐':'')+' '+r.code+' <span style="font-weight:400;opacity:.75">'+r.nom+'</span></div>';});
@@ -1641,7 +1679,7 @@ function renderUsr(){
   var total=S.reduce(function(a,s){return a+s.figs.length;},0);
   var pct=total>0?Math.round((cn.t/total)*100):0;
   var dobStr='';if(user.dob){try{dobStr=new Date(user.dob+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});}catch(e){dobStr=user.dob;}}
-  var repFigs=Object.keys(col).filter(function(c){return col[c]==='repetida';}).map(function(c){var f=null;S.forEach(function(s){s.figs.forEach(function(ff){if(ff.code===c)f={code:c,nom:ff.nom,tipo:ff.type,ban:s.bandera};});});return f;}).filter(Boolean);
+  var repFigs=Object.keys(col).filter(function(c){return getEst(c)==='repetida';}).map(function(c){var f=null;S.forEach(function(s){s.figs.forEach(function(ff){if(ff.code===c)f={code:c,nom:ff.nom,tipo:ff.type,ban:s.bandera};});});return f;}).filter(Boolean);
   var h='<div class="perf-hdr">'
     +(user.foto_url?'<div class="perf-av" style="background-image:url('+user.foto_url+');background-size:cover;background-position:center"></div>':'<div class="perf-av" style="background:'+(user.color||'#1a3a8a')+';color:#fff">'+(user.avatar||'?')+'</div>')
     +'<div class="perf-nm">'+(user.nombre||'')+' '+(user.apellido||'')+'</div>'
@@ -1665,7 +1703,7 @@ function renderUsr(){
   h+='<div class="sec-card"><h3 onclick="toggleProg()" style="cursor:pointer">📊 PROGRESO POR SELECCIÓN <span id="prog-icon" style="font-size:.78rem;color:var(--txt2);font-weight:400">Ver todas ▼</span></h3>';
   h+='<div id="prog-list">';
   progSecs.forEach(function(s,i){
-    var ten=s.figs.filter(function(f){return col[f.code]==='tengo'||col[f.code]==='repetida';}).length;
+    var ten=s.figs.filter(function(f){return getEst(f.code)==='tengo'||getEst(f.code)==='repetida';}).length;
     var p=Math.round((ten/s.figs.length)*100);
     var hidden=i>=10;
     h+='<div class="prog-row" style="'+(hidden?'display:none':'')+'"><div class="prog-row-top"><span>'+s.bandera+' '+s.nombre+'</span><span style="color:var(--verde)">'+ten+'/'+s.figs.length+'</span></div><div class="prog-bar-sm"><div class="prog-fill" style="width:'+p+'%"></div></div></div>';
@@ -2013,6 +2051,24 @@ function copyToClipboard(txt){
 }
 
 // ===== RESET intQ on tab change =====
+
+function changeCantidad(delta){
+  if(!figData)return;
+  var code=figData.code;
+  if(getEst(code)!=='repetida')return;
+  var cant=getCant(code)+delta;
+  if(cant<1)cant=1;
+  if(cant>99)cant=99;
+  col[code]={estado:'repetida',cantidad:cant};
+  var cantEl=document.getElementById('p-cantidad');
+  if(cantEl)cantEl.textContent=cant;
+  // Save to DB
+  sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:'repetida',cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(){});
+  updateCounters();
+  // Update grid
+  var el=document.getElementById('fig-'+code);
+  if(el)el.className=getFigCls({type:figData.type},'repetida');
+}
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
