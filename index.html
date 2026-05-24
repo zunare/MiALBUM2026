@@ -1676,6 +1676,7 @@ function loadComunasEdit(region){
 
 function openEditProfile(){
   if(!user)return;
+  _pendingPhoto=null;
   openModal('m-edit');
   document.getElementById('edit-nom').value=user.nombre||'';
   document.getElementById('edit-ape').value=user.apellido||'';
@@ -1687,6 +1688,13 @@ function openEditProfile(){
   }
   document.getElementById('edit-err').classList.remove('show');
   document.getElementById('edit-ok').classList.remove('show');
+  // Load current photo
+  setTimeout(function(){
+    var img=document.getElementById('edit-photo-preview');
+    var ph=document.getElementById('edit-photo-placeholder');
+    if(user.foto_url&&img){img.src=user.foto_url;img.style.display='block';if(ph)ph.style.display='none';}
+    else if(img){img.style.display='none';if(ph)ph.style.display='block';}
+  },80);
 }
 
 async function doEditProfile(){
@@ -1781,20 +1789,7 @@ async function uploadPhoto(){
   return sb.storage.from('avatars').getPublicUrl(path).data.publicUrl+'?t='+Date.now();
 }
 
-// Override openEditProfile to load photo
-var _origOpen=openEditProfile;
-function openEditProfile(){
-  _origOpen();_pendingPhoto=null;
-  setTimeout(function(){
-    var img=document.getElementById('edit-photo-preview');
-    var ph=document.getElementById('edit-photo-placeholder');
-    if(user&&user.foto_url&&img){img.src=user.foto_url;img.style.display='block';if(ph)ph.style.display='none';}
-    else if(img){img.style.display='none';if(ph)ph.style.display='block';}
-  },50);
-}
-
-// Override doEditProfile to upload photo
-var _origEdit=doEditProfile;
+// Photo-aware doEditProfile (replaces original)
 async function doEditProfile(){
   var nom=document.getElementById('edit-nom').value.trim();
   var ape=document.getElementById('edit-ape').value.trim();
