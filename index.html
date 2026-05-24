@@ -381,6 +381,40 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .land-users{background:rgba(245,197,24,.12);border:1.5px solid rgba(245,197,24,.3);border-radius:12px;padding:.6rem 1.2rem;display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1.5rem}
 .land-users-n{font-weight:900;font-size:1.2rem;color:var(--oro)}
 .land-users-l{font-size:.75rem;color:rgba(255,255,255,.7)}
+
+/* ===== MODO OSCURO ===== */
+.dark-mode{--bg:#0f1117;--card:#1a1d27;--txt:#e8eaf0;--txt2:#8892a4;--borde:#2a2d3a;--azul:#4a7fd4;--verde:#22a84a;--oro:#f5c518;}
+.dark-mode body{background:var(--bg)}
+.dark-mode .hdr{background:linear-gradient(135deg,#070b14,#0d1f4a)}
+.dark-mode .fg input,.dark-mode .fg select,.dark-mode .nc-search,.dark-mode .grp-inp,.dark-mode .chat-inp,.dark-mode .search-inp{background:#1a1d27;color:var(--txt);border-color:#2a2d3a}
+.dark-mode .card,.dark-mode .pub-card,.dark-mode .sec-card,.dark-mode .conv-it,.dark-mode .modal-box,.dark-mode .nc-box,.dark-mode .chat-hdr,.dark-mode .chat-inp-row{background:#1a1d27;border-color:#2a2d3a}
+.dark-mode .stat,.dark-mode .fig{background:#1a1d27;border-color:#2a2d3a}
+.dark-mode .fig.tengo{background:linear-gradient(135deg,#0d3320,#0f4028)!important}
+.dark-mode .fig.repetida{background:linear-gradient(135deg,#2a2000,#332800)!important}
+.dark-mode .msg.otro{background:#1e2235;border-color:#2a2d3a;color:var(--txt)}
+.dark-mode .msgs{background:#0f1117}
+.dark-mode .fab-opt{background:#1a1d27;border-color:#2a2d3a}
+.dark-mode .sel-item{background:#1e2235;border-color:#2a2d3a;color:#8ab4f8}
+.dark-mode .sel-item.on{background:#2a2000;border-color:#c0900a}
+.dark-mode .auth-tabs{background:#1e2235}
+.dark-mode .auth-tab.active{background:#1a1d27}
+.dark-mode .perf-hdr,.dark-mode .grp-hdr{background:linear-gradient(135deg,#070b14,#0d1f4a)}
+.dark-mode .pb-wrap{background:#2a2d3a}
+.dark-mode .fig-sel,.dark-mode .filt{background:#1a1d27;border-color:#2a2d3a}
+.dark-mode .filt{color:var(--txt2)}
+.dark-mode .nc-user.sel,.dark-mode .nc-user:active{background:#1e2235}
+.dark-mode .card{color:var(--txt)}
+.dark-toggle{position:fixed;top:calc(.55rem + env(safe-area-inset-top));right:4.5rem;z-index:200;background:rgba(255,255,255,.12);border:none;border-radius:20px;padding:.28rem .65rem;cursor:pointer;font-size:.75rem;color:#fff;font-family:var(--ff);font-weight:700;transition:background .2s}
+.dark-toggle:hover{background:rgba(255,255,255,.22)}
+.photo-wrap{display:flex;flex-direction:column;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.photo-circle{width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid var(--borde);cursor:pointer;position:relative;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.8rem;transition:border-color .2s}
+.photo-circle:hover{border-color:var(--azul)}
+.photo-circle img{width:100%;height:100%;object-fit:cover}
+.photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;color:#fff;font-size:.75rem;font-weight:700}
+.photo-circle:hover .photo-overlay{opacity:1}
+.photo-hint{font-size:.7rem;color:var(--txt2);text-align:center}
+#photo-input{display:none}
+.av-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 </style>
 </head>
 <body>
@@ -574,9 +608,12 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
   <div class="hdr">
     <div class="hdr-top">
       <div class="app-title">Mi<span>ALBUM</span> 2026</div>
-      <div class="user-chip" onclick="goTab('usr')">
-        <div class="u-av" id="u-av"></div>
-        <div class="u-nm" id="u-nm"></div>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <button class="dark-toggle" id="dark-btn" onclick="toggleDark()">🌙</button>
+        <div class="user-chip" onclick="goTab('usr')">
+          <div class="u-av" id="u-av" style="overflow:hidden"></div>
+          <div class="u-nm" id="u-nm"></div>
+        </div>
       </div>
     </div>
     <div class="tabs">
@@ -831,10 +868,16 @@ async function loadUser(authUser){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
   var av=document.getElementById('u-av');
-  av.textContent=user.avatar||'?';av.style.background=user.color||'#1a3a8a';av.style.color='#fff';
+  if(user.foto_url){
+    av.innerHTML='<img class="av-img" src="'+user.foto_url+'">';
+    av.style.background='transparent';
+  }else{
+    av.textContent=user.avatar||'?';av.style.background=user.color||'#1a3a8a';av.style.color='#fff';
+  }
   document.getElementById('u-nm').textContent=user.nombre||'';
   goTab('col');
   checkBadge();
+  startRealtime();
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -1208,7 +1251,7 @@ async function loadMsgs(){
   // Load profiles for direct message users
   var profiles={};
   if(pids.length){
-    var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,comuna,region').in('id',pids);
+    var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,comuna,region,foto_url').in('id',pids);
     if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
   }
   updateBadge(0);
@@ -1546,7 +1589,7 @@ function renderUsr(){
   var dobStr='';if(user.dob){try{dobStr=new Date(user.dob+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});}catch(e){dobStr=user.dob;}}
   var repFigs=Object.keys(col).filter(function(c){return col[c]==='repetida';}).map(function(c){var f=null;S.forEach(function(s){s.figs.forEach(function(ff){if(ff.code===c)f={code:c,nom:ff.nom,tipo:ff.type,ban:s.bandera};});});return f;}).filter(Boolean);
   var h='<div class="perf-hdr">'
-    +'<div class="perf-av" style="background:'+(user.color||'#1a3a8a')+';color:#fff">'+(user.avatar||'?')+'</div>'
+    +(user.foto_url?'<div class="perf-av" style="background-image:url('+user.foto_url+');background-size:cover;background-position:center"></div>':'<div class="perf-av" style="background:'+(user.color||'#1a3a8a')+';color:#fff">'+(user.avatar||'?')+'</div>')
     +'<div class="perf-nm">'+(user.nombre||'')+' '+(user.apellido||'')+'</div>'
     +'<div class="perf-loc">📍 '+(user.comuna||'')+((user.region)?' — '+user.region:'')+'</div>'
     +'<div class="perf-dob">📅 '+dobStr+'</div>'
@@ -1600,6 +1643,7 @@ function toggleProg(){
 }
 
 async function logout(){
+  stopRealtime();
   await sb.auth.signOut();
   user=null;col={};pubs=[];selFigs=[];q='';filt='all';allPubs=[];chatTarget=null;
   document.getElementById('app').style.display='none';
@@ -1683,6 +1727,7 @@ async function doDeleteAccount(){
   await sb.from('coleccion').delete().eq('user_id',user.id);
   await sb.from('grupo_miembros').delete().eq('user_id',user.id);
   await sb.from('profiles').delete().eq('id',user.id);
+  stopRealtime();
   await sb.auth.signOut();
   closeModal('m-delete');
   user=null;col={};pubs=[];
@@ -1701,6 +1746,114 @@ async function loadUserCount(){
   }
 }
 
+
+// ===== DARK MODE =====
+var _dark=localStorage.getItem('mialbum_dark')==='1';
+function applyDark(){
+  document.documentElement.classList.toggle('dark-mode',_dark);
+  var btn=document.getElementById('dark-btn');
+  if(btn)btn.textContent=_dark?'☀️':'🌙';
+}
+function toggleDark(){_dark=!_dark;localStorage.setItem('mialbum_dark',_dark?'1':'0');applyDark();}
+applyDark();
+
+// ===== PHOTO UPLOAD =====
+var _pendingPhoto=null;
+function previewPhoto(input){
+  var file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){toast('La foto debe ser menor a 5MB');return;}
+  _pendingPhoto=file;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=document.getElementById('edit-photo-preview');
+    var ph=document.getElementById('edit-photo-placeholder');
+    if(img){img.src=e.target.result;img.style.display='block';}
+    if(ph)ph.style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+async function uploadPhoto(){
+  if(!_pendingPhoto||!user)return null;
+  var ext=_pendingPhoto.name.split('.').pop().toLowerCase()||'jpg';
+  var path=user.id+'/avatar.'+ext;
+  var res=await sb.storage.from('avatars').upload(path,_pendingPhoto,{upsert:true,contentType:_pendingPhoto.type});
+  if(res.error){console.error('Upload:',res.error);return null;}
+  return sb.storage.from('avatars').getPublicUrl(path).data.publicUrl+'?t='+Date.now();
+}
+
+// Override openEditProfile to load photo
+var _origOpen=openEditProfile;
+function openEditProfile(){
+  _origOpen();_pendingPhoto=null;
+  setTimeout(function(){
+    var img=document.getElementById('edit-photo-preview');
+    var ph=document.getElementById('edit-photo-placeholder');
+    if(user&&user.foto_url&&img){img.src=user.foto_url;img.style.display='block';if(ph)ph.style.display='none';}
+    else if(img){img.style.display='none';if(ph)ph.style.display='block';}
+  },50);
+}
+
+// Override doEditProfile to upload photo
+var _origEdit=doEditProfile;
+async function doEditProfile(){
+  var nom=document.getElementById('edit-nom').value.trim();
+  var ape=document.getElementById('edit-ape').value.trim();
+  var reg=document.getElementById('edit-reg').value;
+  var com=document.getElementById('edit-com').value;
+  var errEl=document.getElementById('edit-err');
+  var okEl=document.getElementById('edit-ok');
+  errEl.classList.remove('show');okEl.classList.remove('show');
+  if(!nom){errEl.textContent='Escribe tu nombre';errEl.classList.add('show');return;}
+  if(!reg){errEl.textContent='Selecciona tu región';errEl.classList.add('show');return;}
+  if(!com){errEl.textContent='Selecciona tu comuna';errEl.classList.add('show');return;}
+  var newAv=mkAv(nom,ape||nom);
+  var updates={nombre:nom,apellido:ape,region:reg,comuna:com,avatar:newAv};
+  if(_pendingPhoto){
+    toast('Subiendo foto...');
+    var url=await uploadPhoto();
+    if(url){updates.foto_url=url;user.foto_url=url;}
+  }
+  var res=await sb.from('profiles').update(updates).eq('id',user.id);
+  if(res.error){errEl.textContent='Error: '+res.error.message;errEl.classList.add('show');return;}
+  user.nombre=nom;user.apellido=ape;user.region=reg;user.comuna=com;user.avatar=newAv;
+  var avEl=document.getElementById('u-av');
+  if(user.foto_url&&avEl){
+    avEl.innerHTML='<img class="av-img" src="'+user.foto_url+'">';
+    avEl.style.background='transparent';
+  }else if(avEl){avEl.textContent=newAv;avEl.style.background=user.color||'#1a3a8a';}
+  document.getElementById('u-nm').textContent=nom;
+  okEl.classList.add('show');_pendingPhoto=null;
+  if(tab==='usr')document.getElementById('content').innerHTML=renderUsr();
+}
+
+// ===== REALTIME MESSAGES =====
+var _rtSub=null;
+function startRealtime(){
+  if(_rtSub)return;
+  _rtSub=sb.channel('msgs-rt')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'mensajes'},function(p){
+      var m=p.new;
+      if(chatTarget&&!chatTarget.isGroup&&m.de_user_id===chatTarget.uid&&m.para_user_id===user.id){
+        var list=document.getElementById('chat-msgs');
+        if(list){
+          list.innerHTML+='<div class="msg otro">'+m.texto+'<div class="msg-time">'+fmtHora(m.hora||new Date().toISOString())+'</div></div>';
+          list.scrollTop=list.scrollHeight;
+          sb.from('mensajes').update({leido:true}).eq('id',m.id).then(function(){});
+        }
+      } else if(chatTarget&&chatTarget.isGroup&&m.grupo_id===chatTarget.gid&&m.de_user_id!==user.id){
+        var list=document.getElementById('chat-msgs');
+        if(list){
+          list.innerHTML+='<div class="msg otro">'+m.texto+'<div class="msg-time">'+fmtHora(m.hora||new Date().toISOString())+'</div></div>';
+          list.scrollTop=list.scrollHeight;
+        }
+      } else if(m.para_user_id===user.id){
+        checkBadge();
+        if(tab==='msg')loadMsgs();
+      }
+    })
+    .subscribe();
+}
+function stopRealtime(){if(_rtSub){sb.removeChannel(_rtSub);_rtSub=null;}}
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
@@ -1741,6 +1894,15 @@ init();
     </div>
     <div class="modal-body">
       <div class="modal-form">
+        <div class="photo-wrap">
+          <div class="photo-circle" onclick="document.getElementById('photo-input').click()">
+            <img id="edit-photo-preview" src="" style="display:none">
+            <span id="edit-photo-placeholder">📷</span>
+            <div class="photo-overlay">Cambiar foto</div>
+          </div>
+          <div class="photo-hint">Toca para cambiar foto de perfil (max 5MB)</div>
+          <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(this)">
+        </div>
         <div class="row2">
           <div class="fg"><label>Nombre</label><input type="text" id="edit-nom" maxlength="20"></div>
           <div class="fg"><label>Apellido</label><input type="text" id="edit-ape" maxlength="20"></div>
