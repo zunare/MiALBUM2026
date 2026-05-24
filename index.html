@@ -1967,23 +1967,36 @@ function compartirRepetidas(){
   var txt='🔁 Mis repetidas del álbum Mundial 2026\n';
   txt+='👤 '+user.nombre+' '+( user.apellido||'')+'\n';
   txt+='📍 '+(user.comuna||'')+((user.region)?' ('+user.region+')':'')+'\n\n';
-  // Group by section
+  // Group by section in group order A-L
+  var GRUPO_ORDER_IDS=['fwc','cc','mex','rsa','kor','cze','can','bih','qat','sui','bra','mar','hai','sco','usa','par','aus','tur','ger','cuw','civ','ecu','ned','jpn','swe','tun','bel','egy','irn','nzl','esp','cpv','ksa','uru','fra','sen','irq','nor','arg','alg','aut','jor','por','cod','uzb','col','eng','cro','gha','pan'];
+  var secMap2={};S.forEach(function(s){secMap2[s.id]=s;});
   var byPais={};
   repFigs.forEach(function(code){
     S.forEach(function(s){
       s.figs.forEach(function(f){
         if(f.code===code){
-          if(!byPais[s.nombre])byPais[s.nombre]={ban:s.bandera,codes:[]};
-          byPais[s.nombre].codes.push(code);
+          if(!byPais[s.id])byPais[s.id]={ban:s.bandera,nombre:s.nombre,codes:[]};
+          byPais[s.id].codes.push(code);
         }
       });
     });
   });
-  Object.keys(byPais).forEach(function(pais){
-    txt+=byPais[pais].ban+' '+pais+': '+byPais[pais].codes.join(', ')+'\n';
+  // Print in group order
+  GRUPO_ORDER_IDS.forEach(function(id){
+    if(byPais[id]){
+      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\n';
+    }
+  });
+  // Any remaining not in group order
+  Object.keys(byPais).forEach(function(id){
+    if(GRUPO_ORDER_IDS.indexOf(id)<0){
+      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\n';
+    }
   });
   txt+='\n📲 Encuentra coleccionistas en mialbum2026.cl';
-  if(navigator.share){
+  // On mobile use native share, on desktop always copy
+  var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile&&navigator.share){
     navigator.share({title:'Mis repetidas — MiALBUM 2026',text:txt})
       .catch(function(){copyToClipboard(txt);});
   }else{
