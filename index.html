@@ -415,6 +415,46 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .photo-hint{font-size:.7rem;color:var(--txt2);text-align:center}
 #photo-input{display:none}
 .av-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* ===== BUSQUEDA EN INTERCAMBIOS ===== */
+.int-search-wrap{position:relative;margin-bottom:.7rem}
+.int-search-inp{width:100%;padding:.55rem .85rem .55rem 2rem;border:2px solid var(--borde);border-radius:10px;font-family:var(--ff);font-size:.84rem;background:var(--bg);color:var(--txt);transition:border-color .2s}
+.int-search-inp:focus{outline:none;border-color:var(--azul)}
+
+/* ===== VER PERFIL USUARIO ===== */
+.user-profile-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center}
+.user-profile-modal.open{display:flex}
+.user-profile-box{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:720px;max-height:85vh;overflow-y:auto;padding-bottom:1.5rem}
+.upm-hdr{background:linear-gradient(135deg,#050e24,#1a3a8a);padding:1.2rem 1rem;display:flex;align-items:center;gap:.8rem;border-radius:20px 20px 0 0}
+.upm-av{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;border:3px solid rgba(255,255,255,.25);overflow:hidden;flex-shrink:0}
+.upm-av img{width:100%;height:100%;object-fit:cover}
+.upm-info{flex:1}
+.upm-nm{font-weight:800;font-size:1.1rem;color:#fff}
+.upm-loc{font-size:.75rem;color:rgba(255,255,255,.6);margin-top:.15rem}
+.upm-body{padding:.9rem 1rem}
+.upm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.9rem}
+.upm-stat{background:var(--bg);border-radius:10px;padding:.55rem;text-align:center;border:1.5px solid var(--borde)}
+.upm-stat-n{font-weight:800;font-size:1.3rem;color:var(--azul)}
+.upm-stat-l{font-size:.6rem;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px}
+.upm-reps{margin-top:.6rem}
+.upm-reps h4{font-weight:800;font-size:.85rem;color:var(--txt);margin-bottom:.5rem}
+.upm-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer;padding:.2rem}
+
+/* ===== COMPARTIR REPETIDAS ===== */
+.share-btn{display:flex;align-items:center;gap:.4rem;padding:.45rem .85rem;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;border-radius:10px;font-family:var(--ff);font-size:.78rem;font-weight:700;cursor:pointer;margin-bottom:.6rem}
+
+/* ===== ANIMACIONES ===== */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.content{animation:fadeIn .2s ease}
+.fig:active{animation:popIn .12s ease}
+.panel.open{animation:fadeIn .18s ease}
+.conv-it{animation:fadeIn .15s ease}
+
+/* ===== LOADING INTERCAMBIOS ===== */
+.int-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;gap:.8rem}
+.int-loading .spin{width:36px;height:36px;border:3px solid var(--borde);border-top-color:var(--azul);border-radius:50%;animation:spin .7s linear infinite}
+.int-loading p{font-size:.82rem;color:var(--txt2);font-weight:600}
 </style>
 </head>
 <body>
@@ -704,7 +744,7 @@ var S=[{"id": "fwc", "nombre": "FIFA World Cup 2026", "bandera": "🌍", "figs":
 var REGIONES={"Arica y Parinacota": ["Arica", "Camarones", "Putre", "General Lagos"], "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte", "Camiña", "Colchane", "Huara", "Pica"], "Antofagasta": ["Antofagasta", "Mejillones", "Sierra Gorda", "Taltal", "Calama", "Ollagüe", "San Pedro de Atacama", "Tocopilla", "María Elena"], "Atacama": ["Copiapó", "Caldera", "Tierra Amarilla", "Chañaral", "Diego de Almagro", "Vallenar", "Alto del Carmen", "Freirina", "Huasco"], "Coquimbo": ["La Serena", "Coquimbo", "Andacollo", "La Higuera", "Paiguano", "Vicuña", "Illapel", "Canela", "Los Vilos", "Salamanca", "Ovalle", "Combarbalá", "Monte Patria", "Punitaqui", "Río Hurtado"], "Valparaíso": ["Algarrobo", "Cabildo", "Calle Larga", "Cartagena", "Casablanca", "Concón", "El Quisco", "El Tabo", "Hijuelas", "La Calera", "La Cruz", "La Ligua", "Limache", "Los Andes", "Nogales", "Olmué", "Papudo", "Petorca", "Puchuncaví", "Quilpué", "Quillota", "Quintero", "Rinconada", "San Antonio", "San Felipe", "Santa María", "Santo Domingo", "Valparaíso", "Villa Alemana", "Viña del Mar", "Zapallar"], "Metropolitana": ["Alhué", "Buin", "Calera de Tango", "Cerrillos", "Cerro Navia", "Colina", "Conchalí", "Curacaví", "El Bosque", "El Monte", "Estación Central", "Huechuraba", "Independencia", "Isla de Maipo", "La Cisterna", "La Florida", "La Granja", "La Pintana", "La Reina", "Lampa", "Las Condes", "Lo Barnechea", "Lo Espejo", "Lo Prado", "Macul", "Maipú", "María Pinto", "Melipilla", "Ñuñoa", "Padre Hurtado", "Paine", "Pedro Aguirre Cerda", "Peñaflor", "Peñalolén", "Pirque", "Providencia", "Pudahuel", "Puente Alto", "Quilicura", "Quinta Normal", "Recoleta", "Renca", "San Bernardo", "San José de Maipo", "San Miguel", "San Ramón", "Santiago", "Talagante", "Tiltil", "Vitacura"], "O'Higgins": ["Codegua", "Coinco", "Coltauco", "Doñihue", "Graneros", "Las Cabras", "Machalí", "Malloa", "Mostazal", "Olivar", "Peumo", "Pichidegua", "Quinta de Tilcoco", "Rancagua", "Rengo", "Requínoa", "San Vicente", "Chépica", "Chimbarongo", "Lolol", "Nancagua", "Palmilla", "Peralillo", "Placilla", "Pumanque", "San Fernando", "Santa Cruz"], "Maule": ["Cauquenes", "Chanco", "Pelluhue", "Curicó", "Hualañé", "Licantén", "Molina", "Rauco", "Romeral", "Sagrada Familia", "Teno", "Vichuquén", "Linares", "Colbún", "Longaví", "Parral", "Retiro", "San Javier", "Villa Alegre", "Yerbas Buenas", "Constitución", "Curepto", "Empedrado", "Maule", "Pelarco", "Pencahue", "Río Claro", "San Clemente", "San Rafael", "Talca"], "Ñuble": ["Bulnes", "Chillán", "Chillán Viejo", "El Carmen", "Pemuco", "Pinto", "Quillón", "San Ignacio", "Yungay", "Coihueco", "Ñiquén", "San Carlos", "San Fabián", "San Nicolás", "Cobquecura", "Coelemu", "Ninhue", "Portezuelo", "Quirihue", "Ránquil", "Treguaco"], "Biobío": ["Concepción", "Coronel", "Chiguayante", "Florida", "Hualqui", "Lota", "Penco", "San Pedro de la Paz", "Santa Juana", "Talcahuano", "Tomé", "Hualpén", "Lebu", "Arauco", "Cañete", "Contulmo", "Curanilahue", "Los Álamos", "Tirúa", "Los Ángeles", "Antuco", "Cabrero", "Laja", "Mulchén", "Nacimiento", "Negrete", "Quilaco", "Quilleco", "San Rosendo", "Santa Bárbara", "Tucapel", "Yumbel", "Alto Biobío"], "La Araucanía": ["Temuco", "Carahue", "Cunco", "Curarrehue", "Freire", "Galvarino", "Gorbea", "Lautaro", "Loncoche", "Melipeuco", "Nueva Imperial", "Padre las Casas", "Perquenco", "Pitrufquén", "Pucón", "Saavedra", "Teodoro Schmidt", "Toltén", "Vilcún", "Villarrica", "Cholchol", "Angol", "Collipulli", "Curacautín", "Ercilla", "Lonquimay", "Los Sauces", "Lumaco", "Purén", "Renaico", "Traiguén", "Victoria"], "Los Ríos": ["Valdivia", "Corral", "Futrono", "La Unión", "Lago Ranco", "Lanco", "Los Lagos", "Máfil", "Mariquina", "Paillaco", "Panguipulli", "Río Bueno"], "Los Lagos": ["Puerto Montt", "Calbuco", "Cochamó", "Fresia", "Frutillar", "Los Muermos", "Llanquihue", "Maullín", "Puerto Varas", "Castro", "Ancud", "Chonchi", "Curaco de Vélez", "Dalcahue", "Puqueldón", "Queilén", "Quellón", "Quemchi", "Quinchao", "Osorno", "Puerto Octay", "Purranque", "Puyehue", "Río Negro", "San Juan de la Costa", "San Pablo", "Chaitén", "Futaleufú", "Hualaihué", "Palena"], "Aysén": ["Coyhaique", "Lago Verde", "Aysén", "Cisnes", "Guaitecas", "Chile Chico", "Río Ibáñez", "Cochrane", "O'Higgins", "Tortel"], "Magallanes": ["Punta Arenas", "Laguna Blanca", "Río Verde", "San Gregorio", "Cabo de Hornos", "Antártica", "Porvenir", "Primavera", "Timaukel", "Natales", "Torres del Paine"]};
 var DIST={'Valparaíso':0,'Viña del Mar':8,'Quilpué':18,'Villa Alemana':24,'Concón':15,'Puchuncaví':30,'Quintero':35,'Casablanca':45,'San Antonio':100,'Cartagena':95,'El Quisco':110,'El Tabo':105,'Algarrobo':90,'Santo Domingo':115,'Quillota':55,'La Calera':60,'La Cruz':58,'Nogales':70,'Limache':40,'Olmué':48,'Hijuelas':65,'Los Andes':90,'San Felipe':95,'Calle Larga':88,'Rinconada':92,'Santa María':100,'La Ligua':140,'Petorca':150,'Zapallar':130,'Papudo':135,'Cabildo':120};
 
-var user=null,col={},pubs=[],tab='col',q='',figData=null,selFigs=[],filt='all',chatTarget=null,allPubs=[],readConvs={},soloFaltan=false;
+var user=null,col={},pubs=[],tab='col',q='',figData=null,selFigs=[],filt='all',chatTarget=null,allPubs=[],readConvs={},soloFaltan=false,intQ='';
 
 // ===== UTILS =====
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
@@ -900,6 +940,7 @@ async function init(){
 function goTab(t){
   tab=t;
   if(t!=='col')soloFaltan=false;
+  if(t!=='int')intQ='';
   if(t!=='msg')removeFabs(); // reset filter when leaving collection
   ['col','int','msg','usr'].forEach(function(x){document.getElementById('t-'+x).classList.remove('active');});
   document.getElementById('t-'+t).classList.add('active');
@@ -1131,6 +1172,9 @@ function renderInt(allFigs){
     h+='</div><button class="btn" style="padding:.55rem;font-size:.86rem" onclick="pubReps()">PUBLICAR SELECCIONADAS</button>';
   }
   h+='</div>';
+  h+='<div class="int-search-wrap"><span class="search-ico">🔍</span>'
+    +'<input class="int-search-inp" id="int-search" placeholder="Buscar lámina (ej: BRA01, Messi)..." value="'+intQ.replace(/"/g,'&quot;')+'" oninput="setIntQ(this.value)">'
+    +'</div>';
   h+='<div class="filtros">'
     +'<button class="filt'+(filt==='all'?' on':'')+'" data-f="all" onclick="setFilt(this.dataset.f)">Todos</button>'
     +'<button class="filt'+(filt==='me_sirve'?' on':'')+'" data-f="me_sirve" onclick="setFilt(this.dataset.f)">✅ Me sirven</button>'
@@ -1145,6 +1189,15 @@ function renderInt(allFigs){
   if(filt==='foil')todos=todos.filter(function(u){return u.reps.some(function(r){return r.tipo==='foil';});});
   if(filt==='sur')todos=todos.filter(function(u){return u.reps.some(function(r){return SURAM.indexOf(r.pais)>=0;});});
   if(filt==='me_sirve')todos=todos.filter(function(u){return u.reps.some(function(r){return !col[r.code];});});
+  if(intQ){
+    var iqUp=intQ.toUpperCase().replace(/\s/g,'');
+    var iqLow=intQ.toLowerCase();
+    todos=todos.filter(function(u){
+      return u.reps.some(function(r){
+        return r.code.toUpperCase().indexOf(iqUp)>=0||r.nom.toLowerCase().indexOf(iqLow)>=0||r.pais.toLowerCase().indexOf(iqLow)>=0;
+      });
+    });
+  }
   if(!todos.length){h+='<div class="empty-st"><span class="empty-ico">🔍</span>No hay publicaciones con ese filtro</div>';return h;}
   todos.forEach(function(u){
     var p=u.p||{};var com=p.comuna||'';
@@ -1171,9 +1224,10 @@ function renderInt(allFigs){
     } else if(!isMe&&tesSirven.length===0){
       h+='<div style="font-size:.72rem;color:var(--txt2);margin-bottom:.5rem;padding:.3rem .5rem;background:#f8f9fe;border-radius:6px">😕 Ninguna te sirve</div>';
     }
-    if(!isMe){h+='<div class="pub-acts">'
+    if(!isMe){h+='<div class="pub-acts" style="flex-wrap:wrap;gap:.4rem">'
       +'<button class="amsg amsg-m" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">💬 Mensaje</button>'
-      +'<button class="amsg amsg-s" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">🔄 Proponer cambio</button>'
+      +'<button class="amsg amsg-s" data-uid="'+eid+'" data-nm="'+enm+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">🔄 Proponer</button>'
+      +'<button class="amsg" style="background:#f0f4ff;color:var(--azul)" data-uid="'+eid+'" onclick="verPerfil(decodeURIComponent(this.dataset.uid))">👤 Ver perfil</button>'
       +'</div>';}
     else{h+='<div style="font-size:.71rem;color:var(--verde);font-weight:700;text-align:center;padding:.22rem">✓ Tu publicación — <a href="#" style="color:var(--rojo)" onclick="delPubs();return false">Eliminar</a></div>';}
     h+='</div>';
@@ -1598,7 +1652,11 @@ function renderUsr(){
     +'<div class="ps"><div class="ps-n">'+pubs.length+'</div><div class="ps-l">Publicadas</div></div>'
     +'<div class="ps"><div class="ps-n">'+pct+'%</div><div class="ps-l">Completado</div></div>'
     +'</div></div>';
-  h+='<div class="sec-card"><h3>🔁 MIS REPETIDAS ('+repFigs.length+')</h3>';
+  h+='<div class="sec-card">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.68rem">'
+    +'<h3 style="margin:0">🔁 MIS REPETIDAS ('+repFigs.length+')</h3>'
+    +(repFigs.length>0?'<button class="share-btn" onclick="compartirRepetidas()">📤 Compartir</button>':'')
+    +'</div>';
   if(!repFigs.length)h+='<div style="font-size:.79rem;color:var(--txt2);text-align:center">Sin repetidas aún.</div>';
   else{h+='<div class="rep-chips">';repFigs.forEach(function(f){h+='<div class="rep-chip'+(f.tipo==='foil'?' f':'')+'">'+f.ban+' '+f.code+'</div>';});h+='</div>';}
   h+='</div>';
@@ -1849,6 +1907,99 @@ function startRealtime(){
     .subscribe();
 }
 function stopRealtime(){if(_rtSub){sb.removeChannel(_rtSub);_rtSub=null;}}
+
+// ===== BUSQUEDA INTERCAMBIOS =====
+function setIntQ(v){
+  intQ=v;
+  var c=document.getElementById('content');
+  if(c){
+    // Re-render intercambios with new query
+    var allFigs=[];S.forEach(function(s){s.figs.forEach(function(f){allFigs.push({code:f.code,nom:f.nom,type:f.type,pais:s.nombre,ban:s.bandera});});});
+    c.innerHTML=renderInt(allFigs);
+    var inp=document.getElementById('int-search');
+    if(inp){inp.focus();inp.setSelectionRange(v.length,v.length);}
+  }
+}
+
+// ===== VER PERFIL =====
+async function verPerfil(uid){
+  var pr=await sb.from('profiles').select('*').eq('id',uid).single();
+  if(pr.error||!pr.data){toast('No se pudo cargar el perfil');return;}
+  var p=pr.data;
+  var cr=await sb.from('coleccion').select('sticker_code,estado').eq('user_id',uid);
+  var userCol={};if(cr.data)cr.data.forEach(function(r){userCol[r.sticker_code]=r.estado;});
+  var tengo=0,rep=0;Object.values(userCol).forEach(function(v){if(v==='tengo')tengo++;else if(v==='repetida'){tengo++;rep++;}});
+  var total=S.reduce(function(a,s){return a+s.figs.length;},0);
+  var pct=total>0?Math.round((tengo/total)*100):0;
+  var repList=Object.keys(userCol).filter(function(c){return userCol[c]==='repetida';});
+  var nm=(p.nombre||'')+(p.apellido?' '+p.apellido:'');
+  var avHtml=p.foto_url
+    ?'<div class="upm-av"><img src="'+p.foto_url+'"></div>'
+    :'<div class="upm-av" style="background:'+(p.color||'#1a3a8a')+'">'+( p.avatar||'?')+'</div>';
+  var eid=encodeURIComponent(uid);var enm=encodeURIComponent(nm);
+  var html2='<div class="user-profile-modal open" id="upm" onclick="if(event.target===this)closeUpm()">'
+    +'<div class="user-profile-box">'
+    +'<div class="upm-hdr">'
+    +avHtml
+    +'<div class="upm-info"><div class="upm-nm">'+nm+'</div><div class="upm-loc">📍 '+(p.comuna||'')+((p.region)?' — '+p.region:'')+'</div></div>'
+    +'<button class="upm-close" onclick="closeUpm()">✕</button>'
+    +'</div>'
+    +'<div class="upm-body">'
+    +'<div class="upm-stats">'
+    +'<div class="upm-stat"><div class="upm-stat-n">'+tengo+'</div><div class="upm-stat-l">Tiene</div></div>'
+    +'<div class="upm-stat"><div class="upm-stat-n">'+rep+'</div><div class="upm-stat-l">Repetidas</div></div>'
+    +'<div class="upm-stat"><div class="upm-stat-n">'+pct+'%</div><div class="upm-stat-l">Completado</div></div>'
+    +'</div>'
+    +(repList.length?'<div class="upm-reps"><h4>🔁 Sus repetidas ('+repList.length+'):</h4><div class="figs-pub">'+repList.map(function(c){return'<div class="fig-pill">'+c+'</div>';}).join('')+'</div></div>':'')
+    +'<div style="display:flex;gap:.5rem;margin-top:.9rem">'
+    +'<button class="btn" style="margin:0;flex:1" data-uid="'+eid+'" data-nm="'+enm+'" onclick="closeUpm();openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm))">💬 Enviar mensaje</button>'
+    +'</div>'
+    +'</div></div></div>';
+  var old=document.getElementById('upm');if(old)old.remove();
+  document.body.insertAdjacentHTML('beforeend',html2);
+}
+function closeUpm(){var m=document.getElementById('upm');if(m)m.remove();}
+
+// ===== COMPARTIR REPETIDAS =====
+function compartirRepetidas(){
+  var repFigs=Object.keys(col).filter(function(c){return col[c]==='repetida';});
+  if(!repFigs.length){toast('No tienes repetidas publicadas');return;}
+  var txt='🔁 Mis repetidas del álbum Mundial 2026\n';
+  txt+='👤 '+user.nombre+' '+( user.apellido||'')+'\n';
+  txt+='📍 '+(user.comuna||'')+((user.region)?' ('+user.region+')':'')+'\n\n';
+  // Group by section
+  var byPais={};
+  repFigs.forEach(function(code){
+    S.forEach(function(s){
+      s.figs.forEach(function(f){
+        if(f.code===code){
+          if(!byPais[s.nombre])byPais[s.nombre]={ban:s.bandera,codes:[]};
+          byPais[s.nombre].codes.push(code);
+        }
+      });
+    });
+  });
+  Object.keys(byPais).forEach(function(pais){
+    txt+=byPais[pais].ban+' '+pais+': '+byPais[pais].codes.join(', ')+'\n';
+  });
+  txt+='\n📲 Encuentra coleccionistas en mialbum2026.cl';
+  if(navigator.share){
+    navigator.share({title:'Mis repetidas — MiALBUM 2026',text:txt})
+      .catch(function(){copyToClipboard(txt);});
+  }else{
+    copyToClipboard(txt);
+  }
+}
+function copyToClipboard(txt){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(function(){toast('📋 Lista copiada al portapapeles');});
+  }else{
+    var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('📋 Lista copiada al portapapeles');
+  }
+}
+
+// ===== RESET intQ on tab change =====
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
