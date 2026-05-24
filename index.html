@@ -1142,7 +1142,7 @@ async function markFig(estado){
   updatePanelBtns();
   // Update sticker in grid
   var el=document.getElementById('fig-'+code);
-  if(el)el.className=getFigCls({type:figData.type},col[code]||'');
+  if(el)el.className=getFigCls({type:figData.type},getEst(code));
   // Update counters
   updateCounters();
   // Update section counter
