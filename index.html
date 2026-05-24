@@ -366,6 +366,21 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .land-group-teams{font-size:.6rem;color:rgba(255,255,255,.6);line-height:1.5}
 .land-footer{padding:1.5rem;text-align:center;color:rgba(255,255,255,.35);font-size:.7rem}
 .land-footer a{color:rgba(255,255,255,.45);text-decoration:none}
+
+/* Reset password / Edit profile / Delete account */
+.modal-form{display:flex;flex-direction:column;gap:.65rem;margin-top:.3rem}
+.modal-form .fg{margin-bottom:0}
+.modal-form .fg label{display:block;font-size:.69rem;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.28rem}
+.modal-form .fg input,.modal-form .fg select{width:100%;padding:.6rem .85rem;border:2px solid var(--borde);border-radius:10px;font-family:var(--ff);font-size:.86rem;color:var(--txt);background:#fff;transition:border-color .2s}
+.modal-form .fg input:focus,.modal-form .fg select:focus{outline:none;border-color:var(--azul)}
+.btn-danger{width:100%;padding:.7rem;background:transparent;border:2px solid var(--rojo);color:var(--rojo);border-radius:12px;font-family:var(--ff);font-size:.88rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.3rem}
+.btn-danger:hover{background:var(--rojo);color:#fff}
+.success-msg{background:#e8f8ee;border:1.5px solid var(--verde);border-radius:10px;padding:.7rem .9rem;font-size:.8rem;color:#1a6b30;font-weight:600;display:none;text-align:center}
+.success-msg.show{display:block}
+/* Landing user counter */
+.land-users{background:rgba(245,197,24,.12);border:1.5px solid rgba(245,197,24,.3);border-radius:12px;padding:.6rem 1.2rem;display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1.5rem}
+.land-users-n{font-weight:900;font-size:1.2rem;color:var(--oro)}
+.land-users-l{font-size:.75rem;color:rgba(255,255,255,.7)}
 </style>
 </head>
 <body>
@@ -379,6 +394,10 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
       La app para coleccionistas del álbum Panini del Mundial 2026. 
       Registra tu colección, encuentra repetidas y haz intercambios 
       con coleccionistas de todo Chile.
+    </div>
+    <div class="land-users" id="land-users-wrap">
+      <span class="land-users-n" id="land-users-n">...</span>
+      <span class="land-users-l">coleccionistas registrados en Chile</span>
     </div>
     <div class="land-stats">
       <div class="land-stat">
@@ -543,6 +562,9 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
       <div class="fg"><label>Email</label><input type="email" id="l-email" placeholder="tu@email.com"></div>
       <div class="fg"><label>Contraseña</label><input type="password" id="l-pass" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLog()"></div>
       <div class="ferr" id="log-err"></div>
+      <div style="text-align:right;margin-bottom:.3rem">
+        <a onclick="openModal('m-reset')" style="font-size:.74rem;color:var(--azul);font-weight:700;cursor:pointer;text-decoration:underline">¿Olvidaste tu contraseña?</a>
+      </div>
       <button class="btn" id="btn-log" onclick="doLog()">ENTRAR AL ÁLBUM ⚽</button>
     </div>
   </div>
@@ -827,7 +849,7 @@ async function init(){
     clearTimeout(timer);
     var sess=sr.data&&sr.data.session;
     if(sess&&sess.user){await loadUser(sess.user);}
-    else{document.getElementById('loading').style.display='none';document.getElementById('landing').style.display='flex';}
+    else{document.getElementById('loading').style.display='none';document.getElementById('landing').style.display='flex';loadUserCount();}
   }catch(e){clearTimeout(timer);document.getElementById('loading').style.display='none';document.getElementById('landing').style.display='flex';}
 }
 
@@ -1559,7 +1581,11 @@ function renderUsr(){
     +'<a href="mailto:contacto.mialbum2026@gmail.com" style="display:inline-block;margin-top:.5rem;padding:.5rem 1rem;background:#e8f0ff;color:var(--azul);border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">✉️ contacto.mialbum2026@gmail.com</a>'
     +'<p style="font-size:.73rem;color:var(--txt2);margin-top:.5rem">También puedes escribirnos directamente por el chat de intercambios.</p>'
     +'</div>';
-  h+='<button class="logout-btn" onclick="logout()">Cerrar Sesión</button>';
+  h+='<div style="display:flex;gap:.5rem;margin-top:.35rem">'
+    +'<button class="btn" style="flex:1;padding:.6rem;font-size:.8rem;margin:0;background:linear-gradient(135deg,#1a3a8a,#2a5fd6)" onclick="openEditProfile()">✏️ Editar perfil</button>'
+    +'</div>';
+  h+='<button class="logout-btn" onclick="logout()" style="margin-top:.5rem">Cerrar Sesión</button>';
+  h+='<button class="btn-danger" style="margin-top:.4rem" data-m="m-delete" onclick="openModal(this.dataset.m)">🗑️ Eliminar mi cuenta</button>';
   return h;
 }
 
@@ -1580,11 +1606,196 @@ async function logout(){
   document.getElementById('landing').style.display='flex';
 }
 
+
+// ===== RESET PASSWORD =====
+async function doResetPass(){
+  var email=document.getElementById('reset-email').value.trim();
+  var errEl=document.getElementById('reset-err');
+  var okEl=document.getElementById('reset-ok');
+  errEl.classList.remove('show');okEl.classList.remove('show');
+  if(!email||email.indexOf('@')<0){errEl.textContent='Email inválido';errEl.classList.add('show');return;}
+  var res=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+  if(res.error){errEl.textContent='Error: '+res.error.message;errEl.classList.add('show');return;}
+  okEl.classList.add('show');
+  document.getElementById('reset-email').value='';
+}
+
+// ===== EDIT PROFILE =====
+function loadComunasEdit(region){
+  var sel=document.getElementById('edit-com');
+  sel.innerHTML='<option value="">— Selecciona tu comuna —</option>';
+  if(!region){sel.disabled=true;return;}
+  var comunas=REGIONES[region]||[];
+  comunas.sort().forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  sel.disabled=false;
+}
+
+function openEditProfile(){
+  if(!user)return;
+  openModal('m-edit');
+  document.getElementById('edit-nom').value=user.nombre||'';
+  document.getElementById('edit-ape').value=user.apellido||'';
+  var regSel=document.getElementById('edit-reg');
+  if(user.region){
+    regSel.value=user.region;
+    loadComunasEdit(user.region);
+    setTimeout(function(){document.getElementById('edit-com').value=user.comuna||'';},50);
+  }
+  document.getElementById('edit-err').classList.remove('show');
+  document.getElementById('edit-ok').classList.remove('show');
+}
+
+async function doEditProfile(){
+  var nom=document.getElementById('edit-nom').value.trim();
+  var ape=document.getElementById('edit-ape').value.trim();
+  var reg=document.getElementById('edit-reg').value;
+  var com=document.getElementById('edit-com').value;
+  var errEl=document.getElementById('edit-err');
+  var okEl=document.getElementById('edit-ok');
+  errEl.classList.remove('show');okEl.classList.remove('show');
+  if(!nom){errEl.textContent='Escribe tu nombre';errEl.classList.add('show');return;}
+  if(!reg){errEl.textContent='Selecciona tu región';errEl.classList.add('show');return;}
+  if(!com){errEl.textContent='Selecciona tu comuna';errEl.classList.add('show');return;}
+  var newAv=mkAv(nom,ape||nom);
+  var res=await sb.from('profiles').update({nombre:nom,apellido:ape,region:reg,comuna:com,avatar:newAv}).eq('id',user.id);
+  if(res.error){errEl.textContent='Error: '+res.error.message;errEl.classList.add('show');return;}
+  // Update local user object
+  user.nombre=nom;user.apellido=ape;user.region=reg;user.comuna=com;user.avatar=newAv;
+  // Update header chip
+  document.getElementById('u-nm').textContent=nom;
+  var avEl=document.getElementById('u-av');if(avEl){avEl.textContent=newAv;}
+  okEl.classList.add('show');
+  // Refresh usuario tab if open
+  if(tab==='usr')document.getElementById('content').innerHTML=renderUsr();
+}
+
+// ===== DELETE ACCOUNT =====
+async function doDeleteAccount(){
+  var email=document.getElementById('del-email').value.trim();
+  var errEl=document.getElementById('del-err');
+  errEl.classList.remove('show');
+  if(!user||email.toLowerCase()!==((await sb.auth.getUser()).data.user.email||'').toLowerCase()){
+    errEl.textContent='El email no coincide con tu cuenta';errEl.classList.add('show');return;
+  }
+  // Delete all user data
+  await sb.from('mensajes').delete().eq('de_user_id',user.id);
+  await sb.from('publicaciones').delete().eq('user_id',user.id);
+  await sb.from('coleccion').delete().eq('user_id',user.id);
+  await sb.from('grupo_miembros').delete().eq('user_id',user.id);
+  await sb.from('profiles').delete().eq('id',user.id);
+  await sb.auth.signOut();
+  closeModal('m-delete');
+  user=null;col={};pubs=[];
+  document.getElementById('app').style.display='none';
+  document.getElementById('landing').style.display='flex';
+  toast('Cuenta eliminada. Hasta pronto.');
+}
+
+// ===== LOAD USER COUNT FOR LANDING =====
+async function loadUserCount(){
+  var el=document.getElementById('land-users-n');
+  if(!el)return;
+  var res=await sb.from('profiles').select('id',{count:'exact',head:true});
+  if(res.count!==null&&res.count!==undefined){
+    el.textContent=res.count;
+  }
+}
+
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
 }
 init();
 </script>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-ov" id="m-reset">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>🔑 Recuperar contraseña</h3>
+      <button class="x-btn" onclick="closeModal('m-reset')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--txt2);margin-bottom:.8rem">Te enviaremos un link para restablecer tu contraseña.</p>
+      <div class="modal-form">
+        <div class="fg">
+          <label>Email</label>
+          <input type="email" id="reset-email" placeholder="tu@email.com">
+        </div>
+        <div class="ferr" id="reset-err"></div>
+        <div class="success-msg" id="reset-ok">📧 Email enviado. Revisa tu bandeja de entrada y también el spam.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="doResetPass()">Enviar link de recuperación</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-ov" id="m-edit">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>✏️ Editar perfil</h3>
+      <button class="x-btn" onclick="closeModal('m-edit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-form">
+        <div class="row2">
+          <div class="fg"><label>Nombre</label><input type="text" id="edit-nom" maxlength="20"></div>
+          <div class="fg"><label>Apellido</label><input type="text" id="edit-ape" maxlength="20"></div>
+        </div>
+        <div class="fg">
+          <label>Tu región</label>
+          <select id="edit-reg" onchange="loadComunasEdit(this.value)">
+            <option value="">— Selecciona —</option>
+            <option>Arica y Parinacota</option><option>Tarapacá</option><option>Antofagasta</option>
+            <option>Atacama</option><option>Coquimbo</option><option>Valparaíso</option>
+            <option>Metropolitana</option><option>O'Higgins</option><option>Maule</option>
+            <option>Ñuble</option><option>Biobío</option><option>La Araucanía</option>
+            <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option>
+            <option>Magallanes</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Tu comuna</label>
+          <select id="edit-com" disabled>
+            <option value="">— Primero selecciona región —</option>
+          </select>
+        </div>
+        <div class="ferr" id="edit-err"></div>
+        <div class="success-msg" id="edit-ok">✅ Perfil actualizado correctamente</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="doEditProfile()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div class="modal-ov" id="m-delete">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>🗑️ Eliminar cuenta</h3>
+      <button class="x-btn" onclick="closeModal('m-delete')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--txt);margin-bottom:.6rem">¿Estás seguro que quieres eliminar tu cuenta?</p>
+      <p style="font-size:.8rem;color:var(--rojo);font-weight:600;margin-bottom:.8rem">Esta acción es irreversible. Se eliminarán todos tus datos: colección, publicaciones y mensajes.</p>
+      <div class="modal-form">
+        <div class="fg">
+          <label>Escribe tu email para confirmar</label>
+          <input type="email" id="del-email" placeholder="tu@email.com">
+        </div>
+        <div class="ferr" id="del-err"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" onclick="doDeleteAccount()">Eliminar mi cuenta definitivamente</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
