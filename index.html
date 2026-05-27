@@ -1477,22 +1477,24 @@ async function loadAllUsers(){
 var _selMembers=[];
 var _isGroupMode=false;
 
-async function openNewChat(){await loadAllUsers();_isGroupMode=false;_selMembers=[];showNcModal(false);}
-async function openNewGroup(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true);}
+async function openNewChat(){await loadAllUsers();_isGroupMode=false;_selMembers=[];showNcModal(false,false);}
+async function openNewGroup(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true,false);}
 
-function showNcModal(isGroup){
+function showNcModal(isGroup, isPublic){
+  _selMembers=[];
   var old=document.getElementById('nc-modal');if(old)old.remove();
   var div=document.createElement('div');
-  div.className='nc-modal open';
-  div.id='nc-modal';
+  div.className='nc-modal open';div.id='nc-modal';
+  var titulo=isPublic?'🌐 Crear grupo público':(isGroup?'👥 Crear grupo privado':'💬 Nuevo mensaje');
   div.innerHTML='<div class="nc-box">'
-    +'<h3>'+(isGroup?'👥 Crear grupo':'💬 Nuevo mensaje')+'</h3>'
+    +'<h3>'+titulo+'</h3>'
     +(isGroup?'<input class="grp-inp" id="grp-title" placeholder="Nombre del grupo"><div class="sel-chips" id="sel-chips"></div>':'')
+    +(isPublic?'<p style="font-size:.75rem;color:var(--txt2);margin-bottom:.5rem">Cualquier usuario podrá unirse y ver los mensajes.</p>':'')
     +'<input class="nc-search" id="nc-search" placeholder="Buscar por nombre o comuna...">'
     +'<div class="nc-users" id="nc-users"></div>'
     +'<div style="display:flex;gap:.5rem;margin-top:.7rem">'
     +'<button class="btn" style="background:#f0f4ff;color:var(--txt);box-shadow:none;margin:0;flex:1" onclick="closeNcModal()">Cancelar</button>'
-    +(isGroup?'<button class="btn" style="margin:0;flex:1" onclick="doCreateGroup()">Crear grupo</button>':'')
+    +(isGroup?'<button class="btn" style="margin:0;flex:1" onclick="doCreateGroup()">Crear</button>':'')
     +'</div>'
     +'</div>';
   document.body.appendChild(div);
@@ -2153,11 +2155,7 @@ function renderFab(container){
 function openFabMenu(){var m=document.getElementById('fab-menu');var o=document.getElementById('fab-overlay');if(m)m.classList.add('open');if(o)o.classList.add('open');}
 function closeFabMenu(){var m=document.getElementById('fab-menu');var o=document.getElementById('fab-overlay');if(m)m.classList.remove('open');if(o)o.classList.remove('open');}
 
-function openNewGrupoPublico(){
-  // Same as create group but with es_publica=true
-  _isGroupMode=true;_selMembers=[];
-  showNcModal(true, true); // isGroup=true, isPublic=true
-}
+async function openNewGrupoPublico(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true,true);}
 
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
