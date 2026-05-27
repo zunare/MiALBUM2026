@@ -1586,7 +1586,7 @@ async function loadGroupMsgs(gid){
     if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
   }
   // Load messages
-  var res=await sb.from('mensajes').select('*').eq('grupo_id',gid).order('hora',{ascending:true});
+  var res=await sb.from('mensajes').select('*,profiles(id,nombre,apellido,avatar,color)').eq('grupo_id',gid).order('hora',{ascending:true});
   var msgs=res.data||[];
   var list=document.getElementById('chat-msgs');
   if(!msgs.length){
@@ -1598,7 +1598,7 @@ async function loadGroupMsgs(gid){
     var h=fmtHora(m.hora);
     var sender='';
     if(!esYo){
-      var p=profiles[m.de_user_id]||{};
+      var p=m.profiles||profiles[m.de_user_id]||(_allUsers&&_allUsers.find(function(u){return u.id===m.de_user_id;}))||{};
       sender='<div style="font-size:.65rem;font-weight:700;color:var(--azul);margin-bottom:.18rem">'+(p.nombre||'Usuario')+'</div>';
     }
     return '<div class="msg '+(esYo?'yo':'otro')+'">'
@@ -1678,11 +1678,17 @@ async function openChat(uid,nombre,avTxt,avColor){
 }
 function fmtHora(iso){
   var d=new Date(iso);
-  // Use browser's local timezone - it's already set to Chile on Chilean devices
-  // This ensures consistency between sent and received messages
-  var hh=d.getHours().toString().padStart(2,'0');
-  var mm=d.getMinutes().toString().padStart(2,'0');
-  return hh+':'+mm;
+  try{
+    // Force Chile timezone (America/Santiago handles DST automatically)
+    return d.toLocaleTimeString('es-CL',{
+      hour:'2-digit',minute:'2-digit',
+      timeZone:'America/Santiago'
+    });
+  }catch(e){
+    // Fallback: manually subtract 4 hours (UTC-4 Chile winter)
+    var chile=new Date(d.getTime()-4*60*60*1000);
+    return chile.getUTCHours().toString().padStart(2,'0')+':'+chile.getUTCMinutes().toString().padStart(2,'0');
+  }
 }
 function renderChatMsgs(msgs){
   var list=document.getElementById('chat-msgs');
