@@ -1367,7 +1367,7 @@ async function loadMsgs(){
   var cached=document.getElementById('msgs-cache');
   if(cached&&cached.innerHTML){
     c.innerHTML=cached.innerHTML;
-    renderFab(c);
+    if(typeof renderFab==='function')renderFab(c);
   }
 
   try {
@@ -1460,11 +1460,11 @@ async function loadMsgs(){
     var cache=document.getElementById('msgs-cache');
     if(!cache){cache=document.createElement('div');cache.id='msgs-cache';cache.style.display='none';document.body.appendChild(cache);}
     cache.innerHTML=h;
-    renderFab(c);
+    if(typeof renderFab==='function')renderFab(c);
 
   } catch(err) {
     c.innerHTML='<div class="msg-empty" style="padding-top:2rem"><span class="msg-empty-ico">⚠️</span><h3>Error cargando mensajes</h3><p style="font-size:.75rem;color:var(--rojo)">'+err.message+'</p><button class="btn" style="margin-top:1rem;max-width:200px" onclick="loadMsgs()">Reintentar</button></div>';
-    renderFab(c);
+    if(typeof renderFab==='function')renderFab(c);
   }
 }
 
