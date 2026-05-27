@@ -1844,9 +1844,14 @@ async function doDeleteAccount(){
 async function loadUserCount(){
   var el=document.getElementById('land-users-n');
   if(!el)return;
+  // Show cached count immediately if available
+  var cached=localStorage.getItem('mialbum_usercount');
+  if(cached)el.textContent=cached;
+  // Then fetch real count
   var res=await sb.from('profiles').select('id',{count:'exact',head:true});
   if(res.count!==null&&res.count!==undefined){
     el.textContent=res.count;
+    localStorage.setItem('mialbum_usercount',res.count);
   }
 }
 
@@ -2000,8 +2005,8 @@ function closeUpm(){var m=document.getElementById('upm');if(m)m.remove();}
 
 // ===== COMPARTIR REPETIDAS =====
 function compartirRepetidas(){
-  var repFigs=Object.keys(col).filter(function(c){return col[c]==='repetida';});
-  if(!repFigs.length){toast('No tienes repetidas publicadas');return;}
+  var repFigs=Object.keys(col).filter(function(c){return getEst(c)==='repetida';});
+  if(!repFigs.length){toast('No tienes repetidas aún. Márcalas en Mi Colección.');return;}
   var txt='🔁 Mis repetidas del álbum Mundial 2026\n';
   txt+='👤 '+user.nombre+' '+( user.apellido||'')+'\n';
   txt+='📍 '+(user.comuna||'')+((user.region)?' ('+user.region+')':'')+'\n\n';
