@@ -986,8 +986,6 @@ async function loadUser(authUser){
   goTab('col');
   checkBadge();
   startRealtime();
-  // Pre-load messages in background so tab is instant
-  setTimeout(function(){ loadMsgsWithTabs(); }, 1500);
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -1023,10 +1021,10 @@ function goTab(t){
     if(cached&&cached.innerHTML){
       c.innerHTML=cached.innerHTML;
       renderFab(c);
-      loadMsgs(); // refresh in background
+      loadMsgs();
     } else {
       c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';
-      loadMsgsWithTabs();
+      loadMsgs();
     }
   }
   else c.innerHTML=renderUsr();
@@ -1364,108 +1362,110 @@ async function delPubs(){await sb.from('publicaciones').delete().eq('user_id',us
 // ===== MENSAJES =====
 async function loadMsgs(){
   var c=document.getElementById('content');
-  // Show cache instantly
+
+  // Show cache instantly if available
   var cached=document.getElementById('msgs-cache');
-  if(cached&&cached.innerHTML){c.innerHTML=cached.innerHTML;renderFab(c);}
+  if(cached&&cached.innerHTML){
+    c.innerHTML=cached.innerHTML;
+    renderFab(c);
+  }
 
-  // Run all queries in PARALLEL for speed
-  var results=await Promise.all([
-    sb.from('mensajes').select('*')
+  try {
+    // Single simple query - only direct messages
+    var res=await sb.from('mensajes')
+      .select('id,de_user_id,para_user_id,texto,hora,leido,grupo_id')
       .or('de_user_id.eq.'+user.id+',para_user_id.eq.'+user.id)
-      .is('grupo_id',null)
-      .order('hora',{ascending:false}),
-    sb.from('grupo_miembros').select('grupo_id').eq('user_id',user.id)
-  ]);
+      .order('hora',{ascending:false})
+      .limit(200);
 
-  var msgs=results[0].data||[];
-  var gids=(results[1].data||[]).map(function(g){return g.grupo_id;});
+    if(res.error){throw new Error(res.error.message);}
 
-  // Build direct message conversations
-  var cm={};
-  msgs.forEach(function(m){
-    var pid=m.de_user_id===user.id?m.para_user_id:m.de_user_id;
-    if(!cm[pid])cm[pid]={pid:pid,msgs:[],unread:0,isGroup:false};
-    cm[pid].msgs.push(m);
-    if(m.de_user_id!==user.id&&!m.leido)cm[pid].unread++;
-  });
-
-  // Load group data in parallel
-  var grupos={};
-  if(gids.length){
-    var gResults=await Promise.all([
-      sb.from('grupos').select('id,nombre').in('id',gids),
-      sb.from('mensajes').select('*').in('grupo_id',gids)
-        .is('comunidad_id',null).order('hora',{ascending:false})
-    ]);
-    if(gResults[0].data)gResults[0].data.forEach(function(g){grupos[g.id]={gid:g.id,nombre:g.nombre,msgs:[],unread:0,isGroup:true};});
-    if(gResults[1].data)gResults[1].data.forEach(function(m){
-      if(grupos[m.grupo_id]){
-        grupos[m.grupo_id].msgs.push(m);
-        if(m.de_user_id!==user.id&&!m.leido)grupos[m.grupo_id].unread++;
-      }
+    var msgs=res.data||[];
+    var cm={};
+    msgs.forEach(function(m){
+      if(m.grupo_id||m.comunidad_id) return; // skip group messages
+      var pid=m.de_user_id===user.id?m.para_user_id:m.de_user_id;
+      if(!pid) return;
+      if(!cm[pid])cm[pid]={pid:pid,msgs:[],unread:0};
+      cm[pid].msgs.push(m);
+      if(m.de_user_id!==user.id&&!m.leido)cm[pid].unread++;
     });
-  }
 
-  var pids=Object.keys(cm);
-  var allConvs=[];
-  pids.forEach(function(pid){allConvs.push(cm[pid]);});
-  Object.values(grupos).forEach(function(g){allConvs.push(g);});
-  allConvs.sort(function(a,b){
-    var ta=a.msgs[0]?new Date(a.msgs[0].hora).getTime():0;
-    var tb=b.msgs[0]?new Date(b.msgs[0].hora).getTime():0;
-    return tb-ta;
-  });
+    var pids=Object.keys(cm);
+    var profiles={};
+    if(pids.length){
+      var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,foto_url').in('id',pids);
+      if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
+    }
 
-  var profiles={};
-  if(pids.length){
-    var pr=await sb.from('profiles').select('id,nombre,apellido,avatar,color,comuna,region,foto_url').in('id',pids);
-    if(pr.data)pr.data.forEach(function(p){profiles[p.id]=p;});
-  }
-  updateBadge(0);
+    // Also load groups
+    var gmr=await sb.from('grupo_miembros').select('grupo_id').eq('user_id',user.id);
+    var gids=(gmr.data||[]).map(function(g){return g.grupo_id;});
+    var grupos={};
+    if(gids.length){
+      var gr=await sb.from('grupos').select('id,nombre').in('id',gids);
+      if(gr.data)gr.data.forEach(function(g){grupos[g.id]={gid:g.id,nombre:g.nombre,msgs:[],unread:0,isGroup:true};});
+      var gmsgs=await sb.from('mensajes').select('*').in('grupo_id',gids).order('hora',{ascending:false}).limit(100);
+      if(gmsgs.data)gmsgs.data.forEach(function(m){
+        if(grupos[m.grupo_id]){grupos[m.grupo_id].msgs.push(m);if(m.de_user_id!==user.id&&!m.leido)grupos[m.grupo_id].unread++;}
+      });
+    }
 
-  var h='<div class="msgs-screen"><div class="msgs-list-wrap">';
-  // Add comunidades inline at top
-  h+=renderComunidadesInline();
-  if(!allConvs.length && !_comunidades.length){
-    h+='<div class="msg-empty" style="padding-top:2.5rem"><span class="msg-empty-ico">💬</span><h3>Sin mensajes aún</h3><p>Toca el botón + para escribirle a alguien.</p></div>';
-  } else {
-    allConvs.forEach(function(cv){
-      if(cv.isGroup){
-        var last=cv.msgs[0];
-        var ltxt=last?last.texto:'';if(ltxt.length>40)ltxt=ltxt.slice(0,40)+'...';
-        var hora=last?fmtHora(last.hora):'';
-        var isUnread=cv.unread>0;
-        var egid=encodeURIComponent(cv.gid);var enm=encodeURIComponent(cv.nombre);
-        h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-gid="'+egid+'" data-nm="'+enm+'" onclick="openGroupChat(decodeURIComponent(this.dataset.gid),decodeURIComponent(this.dataset.nm))">'
-          +'<div class="conv-av" style="background:#1a3a8a;font-size:1.1rem">👥</div>'
-          +'<div class="conv-info"><div class="conv-nm">'+cv.nombre+' <span style="font-size:.6rem;background:#e8f0ff;color:var(--azul);padding:.1rem .4rem;border-radius:8px;font-weight:700">Grupo</span></div>'
-          +'<div class="conv-last">'+ltxt+'</div></div>'
-          +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(isUnread?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
-          +'</div>';
-      } else {
-        var pid=cv.pid;var p=profiles[pid]||{};
-        var nm=(p&&p.nombre)?p.nombre+' '+(p.apellido||''):'Usuario';
-        var last=cv.msgs[0];var esYo=last&&last.de_user_id===user.id;
-        var ltxt=last?(esYo?'Tú: ':'')+last.texto:'';if(ltxt.length>40)ltxt=ltxt.slice(0,40)+'...';
-        var hora=last?fmtHora(last.hora):'';
-        var eid=encodeURIComponent(pid);var enm=encodeURIComponent(nm);
-        var eav=encodeURIComponent(p.avatar||'?');var ecol=encodeURIComponent(p.color||'#1a3a8a');
-        var isUnread=cv.unread>0&&!readConvs[pid];
-        h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-uid="'+eid+'" data-nm="'+enm+'" data-av="'+eav+'" data-col="'+ecol+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm),decodeURIComponent(this.dataset.av),decodeURIComponent(this.dataset.col))">'
-          +(p.foto_url?'<div class="conv-av" style="background-image:url('+p.foto_url+');background-size:cover;background-position:center"></div>':'<div class="conv-av" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div>')
-          +'<div class="conv-info"><div class="conv-nm">'+nm+'</div><div class="conv-last">'+ltxt+'</div></div>'
-          +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(isUnread?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
-          +'</div>';
-      }
+    var allConvs=[];
+    pids.forEach(function(pid){allConvs.push(cm[pid]);});
+    Object.values(grupos).forEach(function(g){allConvs.push(g);});
+    allConvs.sort(function(a,b){
+      var ta=a.msgs[0]?new Date(a.msgs[0].hora).getTime():0;
+      var tb=b.msgs[0]?new Date(b.msgs[0].hora).getTime():0;
+      return tb-ta;
     });
+
+    updateBadge(0);
+    var h='<div class="msgs-screen"><div class="msgs-list-wrap">';
+    if(!allConvs.length){
+      h+='<div class="msg-empty" style="padding-top:2.5rem"><span class="msg-empty-ico">💬</span><h3>Sin mensajes aún</h3><p>Toca el botón + para escribirle a alguien.</p></div>';
+    } else {
+      allConvs.forEach(function(cv){
+        if(cv.isGroup){
+          var last=cv.msgs[0];
+          var ltxt=last?last.texto:'';if(ltxt.length>40)ltxt=ltxt.slice(0,40)+'...';
+          var hora=last?fmtHora(last.hora):'';
+          var isUnread=cv.unread>0;
+          var egid=encodeURIComponent(cv.gid);var enm=encodeURIComponent(cv.nombre);
+          h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-gid="'+egid+'" data-nm="'+enm+'" onclick="openGroupChat(decodeURIComponent(this.dataset.gid),decodeURIComponent(this.dataset.nm))">'
+            +'<div class="conv-av" style="background:#1a3a8a;font-size:1.1rem">👥</div>'
+            +'<div class="conv-info"><div class="conv-nm">'+cv.nombre+' <span style="font-size:.6rem;background:#e8f0ff;color:var(--azul);padding:.1rem .4rem;border-radius:8px;font-weight:700">Grupo</span></div>'
+            +'<div class="conv-last">'+ltxt+'</div></div>'
+            +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(isUnread?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
+            +'</div>';
+        } else {
+          var pid=cv.pid;var p=profiles[pid]||{};
+          var nm=(p&&p.nombre)?p.nombre+' '+(p.apellido||''):'Usuario';
+          var last=cv.msgs[0];var esYo=last&&last.de_user_id===user.id;
+          var ltxt=last?(esYo?'Tú: ':'')+last.texto:'';if(ltxt.length>40)ltxt=ltxt.slice(0,40)+'...';
+          var hora=last?fmtHora(last.hora):'';
+          var eid=encodeURIComponent(pid);var enm=encodeURIComponent(nm);
+          var eav=encodeURIComponent(p.avatar||'?');var ecol=encodeURIComponent(p.color||'#1a3a8a');
+          var isUnread=cv.unread>0&&!readConvs[pid];
+          h+='<div class="conv-it'+(isUnread?' unread':'')+'" data-uid="'+eid+'" data-nm="'+enm+'" data-av="'+eav+'" data-col="'+ecol+'" onclick="openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm),decodeURIComponent(this.dataset.av),decodeURIComponent(this.dataset.col))">'
+            +(p.foto_url?'<div class="conv-av" style="background-image:url('+p.foto_url+');background-size:cover;background-position:center"></div>':'<div class="conv-av" style="background:'+(p.color||'#1a3a8a')+'">'+(p.avatar||'?')+'</div>')
+            +'<div class="conv-info"><div class="conv-nm">'+nm+'</div><div class="conv-last">'+ltxt+'</div></div>'
+            +'<div class="conv-meta"><div class="conv-time">'+hora+'</div>'+(isUnread?'<div class="conv-badge">'+cv.unread+'</div>':'')+'</div>'
+            +'</div>';
+        }
+      });
+    }
+    h+='</div></div>';
+    c.innerHTML=h;
+    var cache=document.getElementById('msgs-cache');
+    if(!cache){cache=document.createElement('div');cache.id='msgs-cache';cache.style.display='none';document.body.appendChild(cache);}
+    cache.innerHTML=h;
+    renderFab(c);
+
+  } catch(err) {
+    c.innerHTML='<div class="msg-empty" style="padding-top:2rem"><span class="msg-empty-ico">⚠️</span><h3>Error cargando mensajes</h3><p style="font-size:.75rem;color:var(--rojo)">'+err.message+'</p><button class="btn" style="margin-top:1rem;max-width:200px" onclick="loadMsgs()">Reintentar</button></div>';
+    renderFab(c);
   }
-  h+='</div></div>';
-  var finalHtml=h;
-  c.innerHTML=finalHtml;
-  var cache=document.getElementById('msgs-cache');
-  if(!cache){cache=document.createElement('div');cache.id='msgs-cache';cache.style.display='none';document.body.appendChild(cache);}
-  cache.innerHTML=finalHtml;
-  renderFab(c);
 }
 
 async function loadAllUsers(){
@@ -2117,120 +2117,6 @@ function changeCantidad(delta){
   if(el)el.className=getFigCls({type:figData.type},'repetida');
 }
 
-// ===== COMUNIDADES - shown inline in messages list =====
-var _comLoaded = false;
-var _misComunidades = {};
-var _comunidades = [];
-
-async function loadComunidadesData(){
-  if(_comLoaded) return;
-  var results = await Promise.all([
-    sb.from('grupos').select('id,nombre,emoji,descripcion').eq('es_publica',true).order('created_at',{ascending:false}),
-    sb.from('grupo_miembros').select('grupo_id').eq('user_id',user.id)
-  ]);
-  _comunidades = results[0].data||[];
-  _misComunidades = {};
-  if(results[1].data) results[1].data.forEach(function(r){ _misComunidades[r.grupo_id]=true; });
-  _comLoaded = true;
-}
-
-function renderComunidadesInline(){
-  if(!_comunidades.length) return '';
-  var h = '<div style="padding:.5rem 0 .3rem;font-size:.7rem;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px">🌐 Comunidades</div>';
-  _comunidades.forEach(function(com){
-    var joined = !!_misComunidades[com.id];
-    var egid = encodeURIComponent(com.id);
-    var enm = encodeURIComponent(com.nombre);
-    var eemoji = encodeURIComponent(com.emoji||'🌐');
-    h += '<div class="conv-it" style="border-left:3px solid #7b2fff" data-gid="'+egid+'" data-nm="'+enm+'" data-emoji="'+eemoji+'" onclick="openGrupoComunidad(decodeURIComponent(this.dataset.gid),decodeURIComponent(this.dataset.nm),decodeURIComponent(this.dataset.emoji))">'
-      +'<div class="conv-av" style="background:linear-gradient(135deg,#7b2fff,#9b59b6)">'+(com.emoji||'🌐')+'</div>'
-      +'<div class="conv-info">'
-      +'<div class="conv-nm">'+com.nombre+' <span style="font-size:.58rem;background:#f0e8ff;color:#7b2fff;padding:.08rem .38rem;border-radius:6px;font-weight:800">Comunidad</span></div>'
-      +'<div class="conv-last">'+(com.descripcion||'Grupo público — únete y participa')+'</div>'
-      +'</div>'
-      +'<div class="conv-meta">'
-      +(joined
-        ? '<button class="com-join-btn joined" style="font-size:.65rem;padding:.22rem .55rem" data-gid="'+egid+'" onclick="event.stopPropagation();salirComunidad(this,decodeURIComponent(this.dataset.gid))"><span>✓</span></button>'
-        : '<button class="com-join-btn" style="font-size:.65rem;padding:.22rem .55rem" data-gid="'+egid+'" data-nm="'+enm+'" data-emoji="'+eemoji+'" onclick="event.stopPropagation();unirseGrupo(this,decodeURIComponent(this.dataset.gid),decodeURIComponent(this.dataset.nm),decodeURIComponent(this.dataset.emoji))">Unirse</button>')
-      +'</div>'
-      +'</div>';
-  });
-  h += '<div style="height:.4rem"></div><div style="padding:.3rem 0 .5rem;font-size:.7rem;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px">💬 Mensajes</div>';
-  return h;
-}
-
-async function unirseGrupo(btn,gid,nombre,emoji){
-  await sb.from('grupo_miembros').insert({grupo_id:gid,user_id:user.id});
-  _misComunidades[gid]=true;
-  btn.className='com-join-btn joined';
-  btn.style.fontSize='.65rem';btn.style.padding='.22rem .55rem';
-  btn.innerHTML='<span>✓</span>';
-  btn.dataset.gid=encodeURIComponent(gid);
-  btn.onclick=function(ev){ev.stopPropagation();salirComunidad(this,decodeURIComponent(this.dataset.gid));};
-  toast('¡Te uniste a '+nombre+'!');
-}
-
-async function salirComunidad(btn,gid){
-  await sb.from('grupo_miembros').delete().eq('grupo_id',gid).eq('user_id',user.id);
-  delete _misComunidades[gid];
-  btn.className='com-join-btn';
-  btn.style.fontSize='.65rem';btn.style.padding='.22rem .55rem';
-  btn.innerHTML='Unirse';
-  var egid=encodeURIComponent(gid);
-  btn.dataset.gid=egid;
-  btn.onclick=function(ev){ev.stopPropagation();unirseGrupo(this,decodeURIComponent(this.dataset.gid),'','🌐');};
-  toast('Saliste de la comunidad');
-}
-
-function openGrupoComunidad(gid,nombre,emoji){
-  openGroupChat(gid,nombre);
-  var av=document.getElementById('chat-av');
-  if(av){av.textContent=emoji||'🌐';av.style.background='linear-gradient(135deg,#7b2fff,#9b59b6)';}
-}
-
-// Create community
-var _comEmoji='🌐';
-function openNewComunidad(){
-  var emojis=['🌐','⚽','🏆','🇨🇱','🔄','📍','🤝','🎯','🏙️','🎓','🏠','💬','🔥','⭐','🎉'];
-  var old=document.getElementById('nc-modal');if(old)old.remove();
-  var div=document.createElement('div');
-  div.className='nc-modal open';div.id='nc-modal';
-  div.innerHTML='<div class="nc-box">'
-    +'<h3>🌐 Crear comunidad pública</h3>'
-    +'<div style="font-size:.75rem;font-weight:700;color:var(--txt2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.4px">Ícono</div>'
-    +'<div class="com-emoji-grid">'+emojis.map(function(em){
-      return'<div class="com-emoji-btn'+(em===_comEmoji?' sel':'')+'" data-em="'+encodeURIComponent(em)+'" onclick="selComEmoji(this,decodeURIComponent(this.dataset.em))">'+em+'</div>';
-    }).join('')+'</div>'
-    +'<input class="grp-inp" id="com-name" placeholder="Nombre de la comunidad" maxlength="40">'
-    +'<input class="grp-inp" id="com-desc" placeholder="Descripción (opcional)" maxlength="100">'
-    +'<div class="ferr" id="com-err"></div>'
-    +'<div style="display:flex;gap:.5rem;margin-top:.7rem">'
-    +'<button class="btn" style="background:#f0f4ff;color:var(--txt);box-shadow:none;margin:0;flex:1" onclick="closeNcModal()">Cancelar</button>'
-    +'<button class="btn" style="margin:0;flex:1" onclick="doCreateComunidad()">Crear</button>'
-    +'</div></div>';
-  document.body.appendChild(div);
-}
-
-function selComEmoji(btn,emoji){
-  _comEmoji=emoji;
-  document.querySelectorAll('.com-emoji-btn').forEach(function(b){b.classList.remove('sel');});
-  btn.classList.add('sel');
-}
-
-async function doCreateComunidad(){
-  var nombre=(document.getElementById('com-name')||{}).value||'';
-  var desc=(document.getElementById('com-desc')||{}).value||'';
-  var errEl=document.getElementById('com-err');
-  if(!nombre.trim()){if(errEl){errEl.textContent='Escribe un nombre';errEl.classList.add('show');}return;}
-  var res=await sb.from('grupos').insert({nombre:nombre.trim(),creado_por:user.id,es_publica:true,emoji:_comEmoji,descripcion:desc.trim()||null}).select().single();
-  if(res.error){if(errEl){errEl.textContent='Error: '+res.error.message;errEl.classList.add('show');}return;}
-  await sb.from('grupo_miembros').insert({grupo_id:res.data.id,user_id:user.id});
-  _misComunidades[res.data.id]=true;
-  _comunidades.unshift(res.data);
-  closeNcModal();
-  toast('¡Comunidad "'+nombre.trim()+'" creada!');
-  loadMsgs();
-}
 
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
