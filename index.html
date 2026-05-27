@@ -1507,7 +1507,8 @@ function renderNcUsers(q){
     return ((u.nombre||'')+' '+(u.apellido||'')).toLowerCase().indexOf(q.toLowerCase())>=0
       ||(u.comuna||'').toLowerCase().indexOf(q.toLowerCase())>=0;
   }):_allUsers;
-  list.innerHTML=filtered.slice(0,40).map(function(u){
+  var toShow=q?filtered:filtered.slice(0,50);
+  list.innerHTML=toShow.map(function(u){
     var nm=(u.nombre||'')+' '+(u.apellido||'');
     var isSel=_selMembers.indexOf(u.id)>=0;
     var uid=u.id;var color=u.color||'#1a3a8a';var av=u.avatar||'?';
@@ -1516,7 +1517,7 @@ function renderNcUsers(q){
       +'<div><div class="nc-nm">'+nm+'</div><div class="nc-loc">📍 '+(u.comuna||'')+((u.region)?', '+u.region:'')+'</div></div>'
       +'</div>';
   }).join('');
-  filtered.slice(0,40).forEach(function(u){
+  toShow.forEach(function(u){
     var el=document.getElementById('ncu-'+u.id);
     if(!el)return;
     el.onclick=function(){
