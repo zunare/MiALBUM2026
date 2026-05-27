@@ -1462,11 +1462,13 @@ async function loadMsgs(){
     }
   });
   h+='</div></div>';
-  c.innerHTML=h;
+  // Prepend tabs
+  var finalHtml = renderMsgTabs() + h;
+  c.innerHTML = finalHtml;
   // Cache for instant display next time
   var cache=document.getElementById('msgs-cache');
   if(!cache){cache=document.createElement('div');cache.id='msgs-cache';cache.style.display='none';document.body.appendChild(cache);}
-  cache.innerHTML=h;
+  cache.innerHTML=finalHtml;
   renderFab(c);
 }
 
@@ -2150,12 +2152,11 @@ var _msgSubTab = 'mensajes'; // 'mensajes' or 'comunidades'
 var _misComunidades = {}; // comunidad_id -> true if joined
 
 async function loadMsgsWithTabs(){
-  // Load joined communities
   var mr = await sb.from('comunidad_miembros').select('comunidad_id').eq('user_id', user.id);
   _misComunidades = {};
   if(mr.data) mr.data.forEach(function(r){ _misComunidades[r.comunidad_id] = true; });
   if(_msgSubTab === 'comunidades') loadComunidades();
-  else loadMsgs();
+  else await _loadMsgsDirect();
 }
 
 function renderMsgTabs(){
@@ -2168,29 +2169,11 @@ function renderMsgTabs(){
 function switchMsgTab(t){
   _msgSubTab = t;
   removeFabs();
-  if(t==='mensajes') loadMsgs();
+  if(t==='mensajes') _loadMsgsDirect();
   else loadComunidades();
 }
 
-// Override loadMsgs to add tabs header
-var _origLoadMsgs = loadMsgs;
-async function loadMsgs(){
-  var c = document.getElementById('content');
-  if(!c) return;
-  // Keep tabs if already showing msg tab
-  if(tab === 'msg'){
-    var cached = document.getElementById('msgs-cache');
-    if(cached){ c.innerHTML = cached.innerHTML; renderFab(c); }
-    else { c.innerHTML = '<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>'; }
-    removeFabs();
-  }
-  await _origLoadMsgs();
-  // Prepend tabs after load
-  var content = document.getElementById('content');
-  if(content && tab === 'msg'){
-    content.innerHTML = renderMsgTabs() + content.innerHTML;
-  }
-}
+// loadMsgsWithTabs calls original directly
 
 async function loadComunidades(){
   var c = document.getElementById('content');
