@@ -2151,6 +2151,11 @@ async function loadComunidades(){
   renderFab(c);
   // Fetch public groups
   var res=await sb.from('grupos').select('*').eq('es_publica',true).order('created_at',{ascending:false});
+  if(res.error){
+    var c2=document.getElementById('content');
+    if(c2)c2.innerHTML=renderMsgTabs()+'<div class="msg-empty" style="padding-top:2rem"><span class="msg-empty-ico">⚠️</span><h3>Error cargando comunidades</h3><p>'+res.error.message+'</p></div>';
+    return;
+  }
   var coms=res.data||[];
   var h=renderMsgTabs();
   if(!coms.length){
