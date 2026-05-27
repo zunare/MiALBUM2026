@@ -485,6 +485,34 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .msgs-list-wrap{-webkit-overflow-scrolling:touch}
 /* Conv item avatar pulse on unread */
 .conv-it.unread .conv-av{box-shadow:0 0 0 2px var(--azul),0 0 0 4px rgba(26,58,138,.15)}
+
+/* ===== COMUNIDADES ===== */
+.com-tabs{display:flex;gap:.3rem;margin-bottom:.8rem;background:var(--bg);border-radius:12px;padding:.22rem;border:1.5px solid var(--borde)}
+.com-tab{flex:1;padding:.4rem;text-align:center;border:none;background:transparent;font-family:var(--ff);font-size:.75rem;font-weight:700;cursor:pointer;border-radius:9px;color:var(--txt2);transition:all .2s}
+.com-tab.active{background:var(--azul);color:#fff}
+.com-card{background:var(--card);border-radius:14px;padding:.85rem;margin-bottom:.5rem;border:1.5px solid var(--borde);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.com-card:hover{border-color:var(--azul);box-shadow:0 2px 12px rgba(26,58,138,.1)}
+.com-card:active{transform:scale(.99)}
+.com-card-hdr{display:flex;align-items:center;gap:.65rem;margin-bottom:.4rem}
+.com-ico{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--azul),#2a5fd6);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.com-nm{font-weight:800;font-size:.9rem;color:var(--txt)}
+.com-desc{font-size:.74rem;color:var(--txt2);line-height:1.4;margin-bottom:.4rem}
+.com-meta{display:flex;align-items:center;justify-content:space-between}
+.com-members{font-size:.7rem;color:var(--txt2);display:flex;align-items:center;gap:.25rem}
+.com-join-btn{padding:.3rem .75rem;border-radius:20px;border:1.5px solid var(--azul);background:transparent;color:var(--azul);font-family:var(--ff);font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}
+.com-join-btn.joined{background:var(--azul);color:#fff}
+.com-join-btn.joined:hover{background:#d42b2b;border-color:#d42b2b}
+.com-join-btn.joined:hover::after{content:'Salir'}
+.com-join-btn.joined span{display:inline}
+.com-join-btn.joined:hover span{display:none}
+/* Community chat */
+.com-chat-hdr{background:linear-gradient(135deg,#050e24,#1a3a8a)}
+.com-msg-sender{font-size:.65rem;font-weight:700;color:var(--azul);margin-bottom:.15rem}
+.dark-mode .com-msg-sender{color:#8ab4f8}
+/* Create community modal */
+.com-emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;margin-bottom:.6rem}
+.com-emoji-btn{font-size:1.4rem;padding:.4rem;border-radius:8px;border:2px solid var(--borde);background:var(--bg);cursor:pointer;text-align:center;transition:all .15s}
+.com-emoji-btn.sel{border-color:var(--azul);background:#e8f0ff}
 </style>
 </head>
 <body>
@@ -988,11 +1016,10 @@ function goTab(t){
   if(t==='col')c.innerHTML=renderCol();
   else if(t==='int'){c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';loadInt();}
   else if(t==='msg'){
-    // Show cached list instantly if available, then refresh
     var cached=document.getElementById('msgs-cache');
     if(cached){c.innerHTML=cached.innerHTML;renderFab(c);}
     else{c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';}
-    removeFabs();loadMsgs();
+    removeFabs();loadMsgsWithTabs();
   }
   else c.innerHTML=renderUsr();
 }
@@ -2116,6 +2143,255 @@ function changeCantidad(delta){
   // Update grid
   var el=document.getElementById('fig-'+code);
   if(el)el.className=getFigCls({type:figData.type},'repetida');
+}
+
+// ===== COMUNIDADES =====
+var _msgSubTab = 'mensajes'; // 'mensajes' or 'comunidades'
+var _misComunidades = {}; // comunidad_id -> true if joined
+
+async function loadMsgsWithTabs(){
+  // Load joined communities
+  var mr = await sb.from('comunidad_miembros').select('comunidad_id').eq('user_id', user.id);
+  _misComunidades = {};
+  if(mr.data) mr.data.forEach(function(r){ _misComunidades[r.comunidad_id] = true; });
+  if(_msgSubTab === 'comunidades') loadComunidades();
+  else loadMsgs();
+}
+
+function renderMsgTabs(){
+  return '<div class="com-tabs">'
+    +'<button class="com-tab'+(_msgSubTab==='mensajes'?' active':'')+'" data-t="mensajes" onclick="switchMsgTab(this.dataset.t)">💬 Mensajes</button>'
+    +'<button class="com-tab'+(_msgSubTab==='comunidades'?' active':'')+'" data-t="comunidades" onclick="switchMsgTab(this.dataset.t)">🌐 Comunidades</button>'
+    +'</div>';
+}
+
+function switchMsgTab(t){
+  _msgSubTab = t;
+  removeFabs();
+  if(t==='mensajes') loadMsgs();
+  else loadComunidades();
+}
+
+// Override loadMsgs to add tabs header
+var _origLoadMsgs = loadMsgs;
+async function loadMsgs(){
+  var c = document.getElementById('content');
+  if(!c) return;
+  // Keep tabs if already showing msg tab
+  if(tab === 'msg'){
+    var cached = document.getElementById('msgs-cache');
+    if(cached){ c.innerHTML = cached.innerHTML; renderFab(c); }
+    else { c.innerHTML = '<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>'; }
+    removeFabs();
+  }
+  await _origLoadMsgs();
+  // Prepend tabs after load
+  var content = document.getElementById('content');
+  if(content && tab === 'msg'){
+    content.innerHTML = renderMsgTabs() + content.innerHTML;
+  }
+}
+
+async function loadComunidades(){
+  var c = document.getElementById('content');
+  if(!c) return;
+  c.innerHTML = renderMsgTabs() + '<div class="int-loading"><div class="spin"></div><p>Cargando comunidades...</p></div>';
+  renderFab(c);
+
+  var res = await sb.from('comunidades').select('*').order('miembros_count', {ascending: false});
+  var coms = res.data || [];
+
+  var h = renderMsgTabs();
+  if(!coms.length){
+    h += '<div class="msg-empty" style="padding-top:2rem"><span class="msg-empty-ico">🌐</span><h3>Sin comunidades aún</h3><p>¡Crea la primera comunidad!</p></div>';
+  } else {
+    coms.forEach(function(com){
+      var joined = !!_misComunidades[com.id];
+      var eid = encodeURIComponent(com.id);
+      var enm = encodeURIComponent(com.nombre);
+      var eemoji=encodeURIComponent(com.emoji||'🌐');
+      h += '<div class="com-card" data-cid="'+eid+'" data-nm="'+enm+'" data-emoji="'+eemoji+'" onclick="openComunidad(decodeURIComponent(this.dataset.cid),decodeURIComponent(this.dataset.nm),decodeURIComponent(this.dataset.emoji))">'
+        +'<div class="com-card-hdr">'
+        +'<div class="com-ico">'+(com.emoji||'🌐')+'</div>'
+        +'<div>'
+        +'<div class="com-nm">'+com.nombre+'</div>'
+        +(com.descripcion?'<div class="com-desc">'+com.descripcion+'</div>':'')
+        +'</div>'
+        +'</div>'
+        +'<div class="com-meta">'
+        +'<div class="com-members">👥 '+(com.miembros_count||0)+' miembro'+((com.miembros_count||0)!==1?'s':'')+'</div>'
+        +'<button class="com-join-btn'+(joined?' joined':'')+'" data-cid="'+eid+'" onclick="event.stopPropagation();toggleJoin(this,decodeURIComponent(this.dataset.cid))">'
+        +(joined?'<span>✓ Unido</span>':'Unirse')+'</button>'
+        +'</div>'
+        +'</div>';
+    });
+  }
+  c.innerHTML = h;
+  renderFab(c);
+  // Replace FAB to show create community option
+  var menu = document.getElementById('fab-menu');
+  if(menu){
+    menu.innerHTML = '<div class="fab-opt" onclick="closeFabMenu();openNewChat()">'
+      +'<div class="fab-opt-ico" style="background:#1a8a3a">💬</div>'
+      +'<span>Nuevo mensaje</span>'
+      +'</div>'
+      +'<div class="fab-opt" onclick="closeFabMenu();openNewGroup()">'
+      +'<div class="fab-opt-ico" style="background:#1a3a8a">👥</div>'
+      +'<span>Crear grupo</span>'
+      +'</div>'
+      +'<div class="fab-opt" onclick="closeFabMenu();openNewComunidad()">'
+      +'<div class="fab-opt-ico" style="background:#7b2fff">🌐</div>'
+      +'<span>Crear comunidad</span>'
+      +'</div>';
+  }
+}
+
+async function toggleJoin(btn, cid){
+  var joined = !!_misComunidades[cid];
+  if(joined){
+    // Leave
+    await sb.from('comunidad_miembros').delete().eq('comunidad_id', cid).eq('user_id', user.id);
+    delete _misComunidades[cid];
+    btn.className = 'com-join-btn';
+    btn.innerHTML = 'Unirse';
+    toast('Saliste de la comunidad');
+  } else {
+    // Join
+    await sb.from('comunidad_miembros').insert({comunidad_id: cid, user_id: user.id});
+    _misComunidades[cid] = true;
+    btn.className = 'com-join-btn joined';
+    btn.innerHTML = '<span>✓ Unido</span>';
+    toast('¡Te uniste a la comunidad!');
+  }
+  // Update member count
+  var countEl = btn.closest('.com-card').querySelector('.com-members');
+  if(countEl){
+    var n = parseInt(countEl.textContent.replace(/\D/g,''))||0;
+    n = joined ? Math.max(0, n-1) : n+1;
+    countEl.textContent = '👥 '+n+' miembro'+(n!==1?'s':'');
+  }
+}
+
+async function openComunidad(cid, nombre, emoji){
+  // Join automatically if not member
+  if(!_misComunidades[cid]){
+    await sb.from('comunidad_miembros').insert({comunidad_id: cid, user_id: user.id});
+    _misComunidades[cid] = true;
+  }
+  chatTarget = {cid: cid, nombre: nombre, isComunidad: true};
+  var av = document.getElementById('chat-av');
+  if(av){ av.textContent = emoji||'🌐'; av.style.background = '#7b2fff'; }
+  document.getElementById('chat-title').textContent = nombre;
+  document.getElementById('chat-msgs').innerHTML = '<div style="display:flex;justify-content:center;padding:1.2rem"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  document.getElementById('chat-ov').classList.add('open');
+  var inp = document.getElementById('chat-inp');
+  if(inp){ inp.value = ''; var sb2 = document.getElementById('send-btn-el'); if(sb2) sb2.disabled = true; }
+  // Load last 50 messages
+  var res = await sb.from('mensajes').select('*,profiles(nombre,apellido,avatar,color,foto_url)').eq('comunidad_id', cid).order('hora', {ascending: false}).limit(50);
+  var msgs = (res.data||[]).reverse();
+  // Render with sender names
+  var list = document.getElementById('chat-msgs');
+  if(!msgs.length){
+    list.innerHTML = '<div style="text-align:center;padding:1.4rem;color:var(--txt2);font-size:.8rem">¡Sé el primero en escribir! 👋</div>';
+    return;
+  }
+  list.innerHTML = msgs.map(function(m){
+    var esYo = m.de_user_id === user.id;
+    var h2 = fmtHora(m.hora);
+    var p = m.profiles || {};
+    var senderName = esYo ? '' : '<div class="com-msg-sender">'+(p.nombre||'Usuario')+'</div>';
+    return '<div class="msg '+(esYo?'yo':'otro')+'">'
+      + senderName + m.texto
+      + '<div class="msg-time">'+h2+'</div>'
+      + '</div>';
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+  // Subscribe to realtime for this community
+  startComunidadRealtime(cid);
+  setTimeout(function(){ document.getElementById('chat-inp').focus(); }, 100);
+}
+
+function startComunidadRealtime(cid){
+  // Already handled by existing realtime subscription for grupo_id
+  // But we need to handle comunidad_id separately
+  if(window._comRtSub) sb.removeChannel(window._comRtSub);
+  window._comRtSub = sb.channel('com-rt-'+cid)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'mensajes', filter:'comunidad_id=eq.'+cid}, function(p){
+      var m = p.new;
+      if(m.de_user_id === user.id) return; // already shown optimistically
+      var list = document.getElementById('chat-msgs');
+      if(!list) return;
+      var h2 = fmtHora(m.hora||new Date().toISOString());
+      // Fetch sender name
+      sb.from('profiles').select('nombre').eq('id', m.de_user_id).single().then(function(pr){
+        var nm = (pr.data&&pr.data.nombre)||'Usuario';
+        list.innerHTML += '<div class="msg otro"><div class="com-msg-sender">'+nm+'</div>'+m.texto+'<div class="msg-time">'+h2+'</div></div>';
+        list.scrollTop = list.scrollHeight;
+      });
+    })
+    .subscribe();
+}
+
+// Override sendMsg to handle comunidad
+var _origSendMsg = sendMsg;
+async function sendMsg(){
+  if(!chatTarget || !chatTarget.isComunidad){ await _origSendMsg(); return; }
+  var inp = document.getElementById('chat-inp');
+  var txt = inp.value.trim();
+  if(!txt) return;
+  inp.value = '';
+  var sb2 = document.getElementById('send-btn-el'); if(sb2) sb2.disabled = true;
+  var h2 = fmtHora(new Date().toISOString());
+  var list = document.getElementById('chat-msgs');
+  if(list){
+    list.innerHTML += '<div class="msg yo">'+txt+'<div class="msg-time">'+h2+'</div></div>';
+    list.scrollTop = list.scrollHeight;
+  }
+  await sb.from('mensajes').insert({de_user_id: user.id, comunidad_id: chatTarget.cid, texto: txt, leido: true});
+}
+
+// Create community modal
+var _comEmoji = '🌐';
+function openNewComunidad(){
+  var emojis = ['🌐','⚽','🏆','🇨🇱','🔄','📍','🤝','🎯','🏙️','🎓','🏠','💬'];
+  var old = document.getElementById('nc-modal'); if(old) old.remove();
+  var div = document.createElement('div');
+  div.className = 'nc-modal open'; div.id = 'nc-modal';
+  div.innerHTML = '<div class="nc-box">'
+    +'<h3>🌐 Crear comunidad</h3>'
+    +'<div style="font-size:.75rem;font-weight:700;color:var(--txt2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.4px">Ícono</div>'
+    +'<div class="com-emoji-grid">'+emojis.map(function(em){var sel=em===_comEmoji?' sel':'';return'<div class="com-emoji-btn'+sel+'" data-em="'+encodeURIComponent(em)+'" onclick="selComEmoji(this,decodeURIComponent(this.dataset.em))">'+em+'</div>';}).join('')+'</div>'
+    +'<input class="grp-inp" id="com-name" placeholder="Nombre de la comunidad" maxlength="40">'
+    +'<input class="grp-inp" id="com-desc" placeholder="Descripción (opcional)" maxlength="100">'
+    +'<div class="ferr" id="com-err"></div>'
+    +'<div style="display:flex;gap:.5rem;margin-top:.7rem">'
+    +'<button class="btn" style="background:#f0f4ff;color:var(--txt);box-shadow:none;margin:0;flex:1" onclick="closeNcModal()">Cancelar</button>'
+    +'<button class="btn" style="margin:0;flex:1" onclick="doCreateComunidad()">Crear</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(div);
+}
+
+function selComEmoji(btn, emoji){
+  _comEmoji = emoji;
+  document.querySelectorAll('.com-emoji-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel');
+}
+
+async function doCreateComunidad(){
+  var nombre = (document.getElementById('com-name')||{}).value||'';
+  var desc = (document.getElementById('com-desc')||{}).value||'';
+  var errEl = document.getElementById('com-err');
+  if(!nombre.trim()){ if(errEl){ errEl.textContent='Escribe un nombre'; errEl.classList.add('show'); } return; }
+  var res = await sb.from('comunidades').insert({nombre: nombre.trim(), descripcion: desc.trim()||null, creado_por: user.id, emoji: _comEmoji}).select().single();
+  if(res.error){ if(errEl){ errEl.textContent='Error: '+res.error.message; errEl.classList.add('show'); } return; }
+  // Auto-join creator
+  await sb.from('comunidad_miembros').insert({comunidad_id: res.data.id, user_id: user.id});
+  _misComunidades[res.data.id] = true;
+  closeNcModal();
+  toast('¡Comunidad "'+nombre.trim()+'" creada!');
+  _msgSubTab = 'comunidades';
+  loadComunidades();
 }
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
