@@ -1477,19 +1477,17 @@ async function loadAllUsers(){
 var _selMembers=[];
 var _isGroupMode=false;
 
-async function openNewChat(){await loadAllUsers();_isGroupMode=false;_selMembers=[];showNcModal(false,false);}
-async function openNewGroup(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true,false);}
+async function openNewChat(){await loadAllUsers();_isGroupMode=false;_selMembers=[];showNcModal(false);}
+async function openNewGroup(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true);}
 
-function showNcModal(isGroup, isPublic){
+function showNcModal(isGroup){
   _selMembers=[];
   var old=document.getElementById('nc-modal');if(old)old.remove();
   var div=document.createElement('div');
   div.className='nc-modal open';div.id='nc-modal';
-  var titulo=isPublic?'🌐 Crear grupo público':(isGroup?'👥 Crear grupo privado':'💬 Nuevo mensaje');
   div.innerHTML='<div class="nc-box">'
-    +'<h3>'+titulo+'</h3>'
+    +'<h3>'+(isGroup?'👥 Crear grupo':'💬 Nuevo mensaje')+'</h3>'
     +(isGroup?'<input class="grp-inp" id="grp-title" placeholder="Nombre del grupo"><div class="sel-chips" id="sel-chips"></div>':'')
-    +(isPublic?'<p style="font-size:.75rem;color:var(--txt2);margin-bottom:.5rem">Cualquier usuario podrá unirse y ver los mensajes.</p>':'')
     +'<input class="nc-search" id="nc-search" placeholder="Buscar por nombre o comuna...">'
     +'<div class="nc-users" id="nc-users"></div>'
     +'<div style="display:flex;gap:.5rem;margin-top:.7rem">'
@@ -1549,19 +1547,18 @@ async function doCreateGroup(){
   var titleEl=document.getElementById('grp-title');
   var title=titleEl?titleEl.value.trim():'';
   if(!title){if(titleEl)titleEl.style.borderColor='var(--rojo)';return;}
-  // Check if public group (no members required)
-  var isPublic=document.getElementById('nc-modal').querySelector('h3').textContent.indexOf('público')>=0;
-  if(!isPublic&&!_selMembers.length){toast('Agrega al menos un miembro');return;}
-  var gr=await sb.from('grupos').insert({nombre:title,creado_por:user.id,es_publica:isPublic||false}).select().single();
-  if(gr.error){toast('Error creando grupo: '+gr.error.message);return;}
+  if(!_selMembers.length){toast('Agrega al menos un miembro');return;}
+  // Create group
+  var gr=await sb.from('grupos').insert({nombre:title,creado_por:user.id}).select().single();
+  if(gr.error){toast('Error: '+gr.error.message);return;}
   var gid=gr.data.id;
-  // Add members (creator + selected)
+  // Add creator + members
   var members=[{grupo_id:gid,user_id:user.id}];
   _selMembers.forEach(function(uid){members.push({grupo_id:gid,user_id:uid});});
-  await sb.from('grupo_miembros').insert(members);
+  var mr=await sb.from('grupo_miembros').insert(members);
+  if(mr.error){toast('Error agregando miembros: '+mr.error.message);return;}
   closeNcModal();
   toast('Grupo "'+title+'" creado!');
-  // Open group chat
   openGroupChat(gid,title);
 }
 function closeNcModal(){var m=document.getElementById('nc-modal');if(m)m.remove();}
