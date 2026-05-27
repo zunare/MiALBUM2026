@@ -986,6 +986,8 @@ async function loadUser(authUser){
   goTab('col');
   checkBadge();
   startRealtime();
+  // Pre-load messages in background so tab is instant
+  setTimeout(function(){ loadMsgsWithTabs(); }, 1500);
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -1016,10 +1018,16 @@ function goTab(t){
   if(t==='col')c.innerHTML=renderCol();
   else if(t==='int'){c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';loadInt();}
   else if(t==='msg'){
+    removeFabs();
     var cached=document.getElementById('msgs-cache');
-    if(cached){c.innerHTML=cached.innerHTML;renderFab(c);}
-    else{c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';}
-    removeFabs();loadMsgsWithTabs();
+    if(cached&&cached.innerHTML){
+      c.innerHTML=cached.innerHTML;
+      renderFab(c);
+      loadMsgs(); // refresh in background
+    } else {
+      c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';
+      loadMsgsWithTabs();
+    }
   }
   else c.innerHTML=renderUsr();
 }
