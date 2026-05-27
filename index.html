@@ -455,6 +455,36 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .int-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;gap:.8rem}
 .int-loading .spin{width:36px;height:36px;border:3px solid var(--borde);border-top-color:var(--azul);border-radius:50%;animation:spin .7s linear infinite}
 .int-loading p{font-size:.82rem;color:var(--txt2);font-weight:600}
+
+/* ===== MENSAJES FLUIDEZ ===== */
+.conv-it{transition:background .1s;-webkit-tap-highlight-color:transparent}
+.conv-it:active{background:#f0f4ff!important}
+.dark-mode .conv-it:active{background:#1e2235!important}
+.msgs{scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.msg{transition:opacity .15s,transform .15s}
+.msg.yo{animation:msgIn .18s ease}
+.msg.otro{animation:msgIn .18s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.chat-inp{transition:border-color .15s;-webkit-appearance:none}
+.send-btn{transition:transform .1s,background .15s}
+.send-btn:active{transform:scale(.88)!important}
+.chat-hdr{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+/* Typing indicator */
+.typing-indicator{display:flex;align-items:center;gap:3px;padding:.45rem .8rem;background:var(--card);border-radius:18px 18px 18px 4px;width:fit-content;margin-bottom:.3rem;border:0.5px solid var(--borde)}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--txt2);animation:typingDot 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+/* Send btn disabled state */
+.send-btn:disabled{background:#c0ccdd;cursor:not-allowed;transform:none!important}
+/* Input focus effect */
+.chat-inp:focus{border-color:var(--azul);box-shadow:0 0 0 3px rgba(26,58,138,.1)}
+/* Smooth tab content transition */
+.content{animation:fadeIn .15s ease}
+/* Mensajes list smooth scroll */
+.msgs-list-wrap{-webkit-overflow-scrolling:touch}
+/* Conv item avatar pulse on unread */
+.conv-it.unread .conv-av{box-shadow:0 0 0 2px var(--azul),0 0 0 4px rgba(26,58,138,.15)}
 </style>
 </head>
 <body>
@@ -702,8 +732,10 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
   </div>
   <div class="msgs" id="chat-msgs"></div>
   <div class="chat-inp-row">
-    <input class="chat-inp" id="chat-inp" placeholder="Mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
-    <button class="send-btn" onclick="sendMsg()">➤</button>
+    <input class="chat-inp" id="chat-inp" placeholder="Mensaje..." 
+      onkeydown="if(event.key==='Enter')sendMsg()"
+      oninput="document.getElementById('send-btn-el').disabled=!this.value.trim()">
+    <button class="send-btn" id="send-btn-el" onclick="sendMsg()" disabled>➤</button>
   </div>
 </div>
 
@@ -955,7 +987,13 @@ function goTab(t){
   var c=document.getElementById('content');
   if(t==='col')c.innerHTML=renderCol();
   else if(t==='int'){c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';loadInt();}
-  else if(t==='msg'){c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';removeFabs();loadMsgs();}
+  else if(t==='msg'){
+    // Show cached list instantly if available, then refresh
+    var cached=document.getElementById('msgs-cache');
+    if(cached){c.innerHTML=cached.innerHTML;renderFab(c);}
+    else{c.innerHTML='<div class="empty-st"><span class="empty-ico">⏳</span>Cargando...</div>';}
+    removeFabs();loadMsgs();
+  }
   else c.innerHTML=renderUsr();
 }
 
@@ -1398,6 +1436,10 @@ async function loadMsgs(){
   });
   h+='</div></div>';
   c.innerHTML=h;
+  // Cache for instant display next time
+  var cache=document.getElementById('msgs-cache');
+  if(!cache){cache=document.createElement('div');cache.id='msgs-cache';cache.style.display='none';document.body.appendChild(cache);}
+  cache.innerHTML=h;
   renderFab(c);
 }
 
@@ -1529,7 +1571,7 @@ async function openGroupChat(gid,nombre){
   var av=document.getElementById('chat-av');
   if(av){av.textContent='👥';av.style.background='#1a3a8a';}
   document.getElementById('chat-title').textContent=nombre;
-  document.getElementById('chat-msgs').innerHTML='<div style="text-align:center;padding:1rem;color:var(--txt2);font-size:.78rem">Cargando...</div>';
+  document.getElementById('chat-msgs').innerHTML='<div style="display:flex;justify-content:center;padding:1.2rem"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
   document.getElementById('chat-ov').classList.add('open');
   await loadGroupMsgs(gid);
   setTimeout(function(){document.getElementById('chat-inp').focus();},100);
@@ -1605,10 +1647,10 @@ async function openChat(uid,nombre,avTxt,avColor){
     if(cl){cl.style.fontWeight='normal';cl.style.color='var(--txt2)';}
   }
   document.getElementById('chat-title').textContent=nombre;
-  document.getElementById('chat-msgs').innerHTML='<div style="text-align:center;padding:1rem;color:var(--txt2);font-size:.78rem">Cargando...</div>';
+  document.getElementById('chat-msgs').innerHTML='<div style="display:flex;justify-content:center;padding:1.2rem"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
   document.getElementById('chat-ov').classList.add('open');
-  var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:true});
-  renderChatMsgs(res.data||[]);
+  var res=await sb.from('mensajes').select('*').or('and(de_user_id.eq.'+user.id+',para_user_id.eq.'+uid+'),and(de_user_id.eq.'+uid+',para_user_id.eq.'+user.id+')').order('hora',{ascending:false}).limit(50);
+  renderChatMsgs((res.data||[]).reverse());
   // Mark as read in DB (async, no await needed)
   sb.from('mensajes').update({leido:true}).eq('para_user_id',user.id).eq('de_user_id',uid).then(function(){});
   // Mark ALL messages from this user as read immediately
@@ -1652,24 +1694,25 @@ function renderChatMsgs(msgs){
 function closeChat(){document.getElementById('chat-ov').classList.remove('open');}
 async function sendMsg(){
   var inp=document.getElementById('chat-inp');var txt=inp.value.trim();
-  if(!txt||!chatTarget)return;inp.value='';
+  if(!txt||!chatTarget)return;
+  inp.value='';
+  var sbBtn=document.getElementById('send-btn-el');if(sbBtn)sbBtn.disabled=true;
   var h=fmtHora(new Date().toISOString());
+  // Show message instantly (optimistic UI)
+  var list=document.getElementById('chat-msgs');
+  if(list){
+    var tmpId='tmp-'+Date.now();
+    list.innerHTML+='<div class="msg yo" id="'+tmpId+'" style="opacity:.7">'+txt+'<div class="msg-time">'+h+'</div></div>';
+    list.scrollTop=list.scrollHeight;
+  }
   if(chatTarget.isGroup){
-    // Group message
-    var res=await sb.from('mensajes').insert({de_user_id:user.id,grupo_id:chatTarget.gid,texto:txt,leido:false}).select();
-    if(res.data&&res.data.length){
-      var list=document.getElementById('chat-msgs');
-      list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+h+'</div></div>';
-      list.scrollTop=list.scrollHeight;
-    }
+    var res=await sb.from('mensajes').insert({de_user_id:user.id,grupo_id:chatTarget.gid,texto:txt,leido:false});
+    if(res.error){var tmp=document.getElementById(tmpId);if(tmp)tmp.style.opacity='1';}
+    else{var tmp=document.getElementById(tmpId);if(tmp)tmp.style.opacity='1';}
   } else {
-    // Direct message
-    var res=await sb.from('mensajes').insert({de_user_id:user.id,para_user_id:chatTarget.uid,texto:txt,leido:false}).select();
-    if(res.data&&res.data.length){
-      var list=document.getElementById('chat-msgs');
-      list.innerHTML+='<div class="msg yo">'+txt+'<div class="msg-time">'+h+'</div></div>';
-      list.scrollTop=list.scrollHeight;
-    }
+    var res=await sb.from('mensajes').insert({de_user_id:user.id,para_user_id:chatTarget.uid,texto:txt,leido:false});
+    if(res.error){var tmp=document.getElementById(tmpId);if(tmp){tmp.style.border='1px solid var(--rojo)';tmp.title='Error al enviar';}}
+    else{var tmp=document.getElementById(tmpId);if(tmp)tmp.style.opacity='1';}
   }
 }
 
