@@ -2140,8 +2140,7 @@ function renderFab(container){
   // Use createElement instead of innerHTML to avoid async onclick issues
   var opts=[
     {ico:'💬',bg:'#1a8a3a',txt:'Nuevo mensaje',fn:function(){closeFabMenu();openNewChat();}},
-    {ico:'👥',bg:'#1a3a8a',txt:'Crear grupo privado',fn:function(){closeFabMenu();openNewGroup();}},
-    {ico:'🌐',bg:'#7b2fff',txt:'Crear grupo público',fn:function(){closeFabMenu();openNewGrupoPublico();}}
+    {ico:'👥',bg:'#1a3a8a',txt:'Crear grupo',fn:function(){closeFabMenu();openNewGroup();}}
   ];
   opts.forEach(function(o){
     var d=document.createElement('div');
