@@ -2137,18 +2137,19 @@ function renderFab(container){
   var menu=document.createElement('div');
   menu.className='fab-menu';
   menu.id='fab-menu';
-  menu.innerHTML='<div class="fab-opt" onclick="closeFabMenu();openNewChat()">'
-    +'<div class="fab-opt-ico" style="background:#1a8a3a">💬</div>'
-    +'<span>Nuevo mensaje</span>'
-    +'</div>'
-    +'<div class="fab-opt" onclick="closeFabMenu();openNewGroup()">'
-    +'<div class="fab-opt-ico" style="background:#1a3a8a">👥</div>'
-    +'<span>Crear grupo privado</span>'
-    +'</div>'
-    +'<div class="fab-opt" onclick="closeFabMenu();openNewGrupoPublico()">'
-    +'<div class="fab-opt-ico" style="background:#7b2fff">🌐</div>'
-    +'<span>Crear grupo público</span>'
-    +'</div>';
+  // Use createElement instead of innerHTML to avoid async onclick issues
+  var opts=[
+    {ico:'💬',bg:'#1a8a3a',txt:'Nuevo mensaje',fn:function(){closeFabMenu();openNewChat();}},
+    {ico:'👥',bg:'#1a3a8a',txt:'Crear grupo privado',fn:function(){closeFabMenu();openNewGroup();}},
+    {ico:'🌐',bg:'#7b2fff',txt:'Crear grupo público',fn:function(){closeFabMenu();openNewGrupoPublico();}}
+  ];
+  opts.forEach(function(o){
+    var d=document.createElement('div');
+    d.className='fab-opt';
+    d.innerHTML='<div class="fab-opt-ico" style="background:'+o.bg+'">'+o.ico+'</div><span>'+o.txt+'</span>';
+    d.addEventListener('click',o.fn);
+    menu.appendChild(d);
+  });
   document.body.appendChild(menu);
 }
 
