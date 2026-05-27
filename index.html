@@ -1403,8 +1403,8 @@ async function loadMsgs(){
     var gids=(gmr.data||[]).map(function(g){return g.grupo_id;});
     var grupos={};
     if(gids.length){
-      var gr=await sb.from('grupos').select('id,nombre').in('id',gids);
-      if(gr.data)gr.data.forEach(function(g){grupos[g.id]={gid:g.id,nombre:g.nombre,msgs:[],unread:0,isGroup:true};});
+      var gr=await sb.from('grupos').select('id,nombre,es_publica').in('id',gids);
+      if(gr.data)gr.data.forEach(function(g){grupos[g.id]={gid:g.id,nombre:g.nombre,msgs:[],unread:0,isGroup:true,esPublica:g.es_publica};});
       var gmsgs=await sb.from('mensajes').select('*').in('grupo_id',gids).order('hora',{ascending:false}).limit(100);
       if(gmsgs.data)gmsgs.data.forEach(function(m){
         if(grupos[m.grupo_id]){grupos[m.grupo_id].msgs.push(m);if(m.de_user_id!==user.id&&!m.leido)grupos[m.grupo_id].unread++;}
@@ -1547,9 +1547,10 @@ async function doCreateGroup(){
   var titleEl=document.getElementById('grp-title');
   var title=titleEl?titleEl.value.trim():'';
   if(!title){if(titleEl)titleEl.style.borderColor='var(--rojo)';return;}
-  if(!_selMembers.length){toast('Agrega al menos un miembro');return;}
-  // Create group in DB
-  var gr=await sb.from('grupos').insert({nombre:title,creado_por:user.id}).select().single();
+  // Check if public group (no members required)
+  var isPublic=document.getElementById('nc-modal').querySelector('h3').textContent.indexOf('público')>=0;
+  if(!isPublic&&!_selMembers.length){toast('Agrega al menos un miembro');return;}
+  var gr=await sb.from('grupos').insert({nombre:title,creado_por:user.id,es_publica:isPublic||false}).select().single();
   if(gr.error){toast('Error creando grupo: '+gr.error.message);return;}
   var gid=gr.data.id;
   // Add members (creator + selected)
@@ -2117,6 +2118,46 @@ function changeCantidad(delta){
   if(el)el.className=getFigCls({type:figData.type},'repetida');
 }
 
+
+function renderFab(container){
+  // Remove existing fab elements first
+  removeFabs();
+  var fab=document.createElement('button');
+  fab.className='msgs-fab';
+  fab.innerHTML='+';
+  fab.onclick=function(){openFabMenu();};
+  document.body.appendChild(fab);
+  var overlay=document.createElement('div');
+  overlay.className='fab-overlay';
+  overlay.id='fab-overlay';
+  overlay.onclick=closeFabMenu;
+  document.body.appendChild(overlay);
+  var menu=document.createElement('div');
+  menu.className='fab-menu';
+  menu.id='fab-menu';
+  menu.innerHTML='<div class="fab-opt" onclick="closeFabMenu();openNewChat()">'
+    +'<div class="fab-opt-ico" style="background:#1a8a3a">💬</div>'
+    +'<span>Nuevo mensaje</span>'
+    +'</div>'
+    +'<div class="fab-opt" onclick="closeFabMenu();openNewGroup()">'
+    +'<div class="fab-opt-ico" style="background:#1a3a8a">👥</div>'
+    +'<span>Crear grupo privado</span>'
+    +'</div>'
+    +'<div class="fab-opt" onclick="closeFabMenu();openNewGrupoPublico()">'
+    +'<div class="fab-opt-ico" style="background:#7b2fff">🌐</div>'
+    +'<span>Crear grupo público</span>'
+    +'</div>';
+  document.body.appendChild(menu);
+}
+
+function openFabMenu(){var m=document.getElementById('fab-menu');var o=document.getElementById('fab-overlay');if(m)m.classList.add('open');if(o)o.classList.add('open');}
+function closeFabMenu(){var m=document.getElementById('fab-menu');var o=document.getElementById('fab-overlay');if(m)m.classList.remove('open');if(o)o.classList.remove('open');}
+
+function openNewGrupoPublico(){
+  // Same as create group but with es_publica=true
+  _isGroupMode=true;_selMembers=[];
+  showNcModal(true, true); // isGroup=true, isPublic=true
+}
 
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
