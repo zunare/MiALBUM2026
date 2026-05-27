@@ -1812,6 +1812,7 @@ function toggleProg(){
 
 async function logout(){
   stopRealtime();
+  _comLoaded = false;
   await sb.auth.signOut();
   user=null;col={};pubs=[];selFigs=[];q='';filt='all';allPubs=[];chatTarget=null;
   document.getElementById('app').style.display='none';
@@ -1904,6 +1905,7 @@ async function doDeleteAccount(){
   await sb.from('grupo_miembros').delete().eq('user_id',user.id);
   await sb.from('profiles').delete().eq('id',user.id);
   stopRealtime();
+  _comLoaded = false;
   await sb.auth.signOut();
   closeModal('m-delete');
   user=null;col={};pubs=[];
@@ -2148,13 +2150,18 @@ function changeCantidad(delta){
 }
 
 // ===== COMUNIDADES =====
-var _msgSubTab = 'mensajes'; // 'mensajes' or 'comunidades'
+var _msgSubTab = 'mensajes';
+var _comLoaded = false; // 'mensajes' or 'comunidades'
 var _misComunidades = {}; // comunidad_id -> true if joined
 
 async function loadMsgsWithTabs(){
-  var mr = await sb.from('comunidad_miembros').select('comunidad_id').eq('user_id', user.id);
-  _misComunidades = {};
-  if(mr.data) mr.data.forEach(function(r){ _misComunidades[r.comunidad_id] = true; });
+  // Only fetch comunidades membership once per session
+  if(!_comLoaded){
+    var mr = await sb.from('comunidad_miembros').select('comunidad_id').eq('user_id', user.id);
+    _misComunidades = {};
+    if(mr.data) mr.data.forEach(function(r){ _misComunidades[r.comunidad_id] = true; });
+    _comLoaded = true;
+  }
   if(_msgSubTab === 'comunidades') loadComunidades();
   else await _loadMsgsDirect();
 }
