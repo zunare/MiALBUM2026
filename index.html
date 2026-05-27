@@ -1554,11 +1554,15 @@ async function doCreateGroup(){
   var gr=await sb.from('grupos').insert({nombre:title,creado_por:user.id}).select().single();
   if(gr.error){toast('Error: '+gr.error.message);return;}
   var gid=gr.data.id;
-  // Add creator + members
-  var members=[{grupo_id:gid,user_id:user.id}];
-  _selMembers.forEach(function(uid){members.push({grupo_id:gid,user_id:uid});});
-  var mr=await sb.from('grupo_miembros').insert(members);
-  if(mr.error){toast('Error agregando miembros: '+mr.error.message);return;}
+  // Add creator first
+  var cr=await sb.from('grupo_miembros').insert({grupo_id:gid,user_id:user.id});
+  if(cr.error){toast('Error: '+cr.error.message);return;}
+  // Add other members using security definer function
+  if(_selMembers.length){
+    var allIds=[user.id].concat(_selMembers);
+    var mr=await sb.rpc('add_group_members',{p_grupo_id:gid,p_user_ids:allIds});
+    if(mr.error){toast('Error agregando miembros: '+mr.error.message);return;}
+  }
   closeNcModal();
   toast('Grupo "'+title+'" creado!');
   openGroupChat(gid,title);
