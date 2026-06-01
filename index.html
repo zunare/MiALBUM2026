@@ -1077,6 +1077,7 @@ function renderCol(){
     +'<input class="search-inp" id="s-inp" placeholder="Buscar jugador o código..." value="'+q.replace(/"/g,'&quot;')+'" oninput="doSearch(this.value)">'
     +'</div>'
     +'<button class="btn-faltan'+(soloFaltan?' on':'')+'" onclick="toggleFaltan()">❌ Me faltan</button>'
+    +'<button class="btn-faltan" style="background:linear-gradient(135deg,#fff3cd,#ffe08a);color:#856404;border-color:#f0c040" onclick="compartirFaltantes()">📋 Copiar faltantes</button>'
     +'</div>';
 
   var GRUPOS=[
@@ -2081,13 +2082,13 @@ function compartirRepetidas(){
   // Print in group order
   GRUPO_ORDER_IDS.forEach(function(id){
     if(byPais[id]){
-      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\n';
+      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\\n';
     }
   });
   // Any remaining not in group order
   Object.keys(byPais).forEach(function(id){
     if(GRUPO_ORDER_IDS.indexOf(id)<0){
-      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\n';
+      txt+=byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', ')+'\\n';
     }
   });
   txt+='\n📲 Encuentra coleccionistas en mialbum2026.cl';
@@ -2100,6 +2101,41 @@ function compartirRepetidas(){
     copyToClipboard(txt);
   }
 }
+
+function compartirFaltantes(){
+  var faltantes=[];
+  S.forEach(function(s){
+    s.figs.forEach(function(f){
+      var est=getEst(f.code);
+      if(est!=='tengo'&&est!=='repetida'){
+        faltantes.push({code:f.code,pais:s.nombre,ban:s.bandera,sid:s.id});
+      }
+    });
+  });
+  if(!faltantes.length){toast('No te falta ninguna! 🏆');return;}
+  var ORDEN=['fwc','cc','mex','rsa','kor','cze','can','bih','qat','sui','bra','mar','hai','sco','usa','par','aus','tur','ger','cuw','civ','ecu','ned','jpn','swe','tun','bel','egy','irn','nzl','esp','cpv','ksa','uru','fra','sen','irq','nor','arg','alg','aut','jor','por','cod','uzb','col','eng','cro','gha','pan'];
+  var byPais={};
+  faltantes.forEach(function(f){
+    if(!byPais[f.sid])byPais[f.sid]={ban:f.ban,nombre:f.pais,codes:[]};
+    byPais[f.sid].codes.push(f.code);
+  });
+  var lines=['Me faltan del album Mundial 2026','Usuario: '+user.nombre+' '+(user.apellido||''),'Ubicacion: '+(user.comuna||'')+((user.region)?' ('+user.region+')':''),''];
+  ORDEN.forEach(function(id){
+    if(byPais[id])lines.push(byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', '));
+  });
+  Object.keys(byPais).forEach(function(id){
+    if(ORDEN.indexOf(id)<0)lines.push(byPais[id].ban+' '+byPais[id].nombre+': '+byPais[id].codes.join(', '));
+  });
+  lines.push('','Encuentra coleccionistas en mialbum2026.cl');
+  var txt=lines.join('\n');
+  var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile&&navigator.share){
+    navigator.share({title:'Me faltan - MiALBUM 2026',text:txt}).catch(function(){copyToClipboard(txt);});
+  }else{
+    copyToClipboard(txt);
+  }
+}
+
 function copyToClipboard(txt){
   if(navigator.clipboard){
     navigator.clipboard.writeText(txt).then(function(){toast('📋 Lista copiada al portapapeles');});
@@ -2122,7 +2158,9 @@ function changeCantidad(delta){
   var cantEl=document.getElementById('p-cantidad');
   if(cantEl)cantEl.textContent=cant;
   // Save to DB
-  sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:'repetida',cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(){});
+  sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:'repetida',cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(r){
+    if(r.error)toast('Error guardando cantidad: '+r.error.message);
+  });
   updateCounters();
   // Update grid
   var el=document.getElementById('fig-'+code);
