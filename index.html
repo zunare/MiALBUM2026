@@ -968,7 +968,7 @@ async function loadUser(authUser){
     }
   }
   user=pr.data;
-  var cr=await sb.from('coleccion').select('sticker_code,estado').eq('user_id',user.id);
+  var cr=await sb.from('coleccion').select('sticker_code,estado,cantidad').eq('user_id',user.id);
   col={};if(cr.data)cr.data.forEach(function(r){col[r.sticker_code]={estado:r.estado,cantidad:r.cantidad||1};});
   var pbr=await sb.from('publicaciones').select('sticker_code').eq('user_id',user.id);
   pubs=pbr.data?pbr.data.map(function(r){return r.sticker_code;}):[]; 
