@@ -718,6 +718,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
     <div class="hdr-top">
       <div class="app-title">Mi<span>ALBUM</span> 2026</div>
       <div style="display:flex;align-items:center;gap:.4rem">
+        <button class="dark-toggle" id="qr-btn" onclick="showQr()" style="font-size:.85rem">⬛</button>
         <button class="dark-toggle" id="dark-btn" onclick="toggleDark()">🌙</button>
         <div class="user-chip" onclick="goTab('usr')">
           <div class="u-av" id="u-av" style="overflow:hidden"></div>
@@ -1787,7 +1788,7 @@ function renderUsr(){
     +'</div>';
   h+='<div style="display:flex;gap:.5rem;margin-top:.35rem">'
     +'<button class="btn" style="flex:1;padding:.6rem;font-size:.8rem;margin:0;background:linear-gradient(135deg,#1a3a8a,#2a5fd6)" onclick="openEditProfile()">✏️ Editar perfil</button>'
-    +'<button class="btn" style="flex:1;padding:.6rem;font-size:.8rem;margin:0;background:linear-gradient(135deg,#7b2fff,#9b59b6)" onclick="showQr()">📱 Mi QR</button>'
+    
     +'</div>';
   h+='<button class="logout-btn" onclick="logout()" style="margin-top:.5rem">Cerrar Sesión</button>';
   h+='<button class="btn-danger" style="margin-top:.4rem" data-m="m-delete" onclick="openModal(this.dataset.m)">🗑️ Eliminar mi cuenta</button>';
@@ -2243,13 +2244,10 @@ async function showQr(){
   await loadQrLib();
   var url=window.location.origin+'?intercambio='+user.id;
   document.getElementById('qr-url-txt').textContent=url;
-  var canvas=document.getElementById('qr-canvas');
-  canvas.innerHTML='';
-  // Clear previous QR
-  canvas.width=180;canvas.height=180;
-  var ctx=canvas.getContext('2d');ctx.clearRect(0,0,180,180);
-  // Generate QR
-  new QRCode(canvas, {
+  var wrap=document.getElementById('qr-canvas');
+  wrap.innerHTML='';
+  // Generate QR in div
+  new QRCode(wrap, {
     text: url,
     width: 180,
     height: 180,
@@ -2468,7 +2466,7 @@ init();
     <h3>📱 Mi QR de intercambio</h3>
     <p>Muéstraselo a alguien para que vea tus repetidas</p>
     <div class="qr-canvas-wrap">
-      <canvas id="qr-canvas"></canvas>
+      <div id="qr-canvas"></div>
     </div>
     <div style="font-size:.72rem;color:var(--txt2);margin-bottom:.8rem" id="qr-url-txt"></div>
     <div class="qr-btns">
