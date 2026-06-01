@@ -524,6 +524,23 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .qr-btns{display:flex;gap:.5rem;margin-top:.5rem}
 .qr-scan-result{background:var(--bg);border-radius:14px;padding:.85rem;margin-top:.6rem;text-align:left}
 .qr-scan-nm{font-weight:800;font-size:.95rem;color:var(--txt);margin-bottom:.4rem}
+
+/* ===== POPUP NOVEDADES ===== */
+.news-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem}
+.news-box{background:var(--card);border-radius:20px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.25);animation:popIn .25s ease}
+.news-hdr{background:linear-gradient(135deg,#050e24,#1a3a8a);padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between}
+.news-hdr h3{color:#fff;font-weight:800;font-size:1rem;margin:0}
+.news-hdr-sub{color:rgba(255,255,255,.6);font-size:.7rem;margin-top:.15rem}
+.news-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.news-body{padding:1rem 1.2rem}
+.news-item{display:flex;gap:.75rem;align-items:flex-start;margin-bottom:.85rem}
+.news-item:last-child{margin-bottom:0}
+.news-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.news-txt h4{font-size:.84rem;font-weight:800;color:var(--txt);margin-bottom:.15rem}
+.news-txt p{font-size:.74rem;color:var(--txt2);line-height:1.45;margin:0}
+.news-footer{padding:.75rem 1.2rem;border-top:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between}
+.news-timer{font-size:.7rem;color:var(--txt2)}
+.news-timer span{font-weight:800;color:var(--azul)}
 </style>
 </head>
 <body>
@@ -718,7 +735,11 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
     <div class="hdr-top">
       <div class="app-title">Mi<span>ALBUM</span> 2026</div>
       <div style="display:flex;align-items:center;gap:.4rem">
-        <button class="dark-toggle" id="qr-btn" onclick="showQr()" style="font-size:.85rem">⬛</button>
+        <button class="dark-toggle" id="qr-btn" onclick="showQr()" style="padding:.28rem .45rem;display:flex;align-items:center;justify-content:center">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm7-2h7v7h-7V3zm2 2v3h3V5h-3zM3 12h7v7H3v-7zm2 2v3h3v-3H5zm11 0h2v2h-2v-2zm-4-2h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
+  </svg>
+</button>
         <button class="dark-toggle" id="dark-btn" onclick="toggleDark()">🌙</button>
         <div class="user-chip" onclick="goTab('usr')">
           <div class="u-av" id="u-av" style="overflow:hidden"></div>
@@ -999,8 +1020,8 @@ async function loadUser(authUser){
   checkBadge();
   startRealtime();
   checkQrParam();
-  // Sync existing repetidas to publicaciones on login
   syncRepetidas();
+  setTimeout(showNews, 800);
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -2376,6 +2397,33 @@ async function syncRepetidas(){
     await sb.from('publicaciones').upsert(rows.slice(i,i+100),{onConflict:'user_id,sticker_code'});
   }
 }
+
+// ===== NOVEDADES POPUP =====
+var _newsTimer = null;
+var _NEWS_VERSION = '2026-06-01'; // Change this to show popup again
+
+function showNews(){
+  var seen = localStorage.getItem('mialbum_news');
+  if(seen === _NEWS_VERSION) return; // Already seen
+  var overlay = document.getElementById('news-overlay');
+  if(!overlay) return;
+  overlay.style.display = 'flex';
+  // Countdown
+  var count = 10;
+  var el = document.getElementById('news-countdown');
+  _newsTimer = setInterval(function(){
+    count--;
+    if(el) el.textContent = count;
+    if(count <= 0){ clearInterval(_newsTimer); closeNews(); }
+  }, 1000);
+}
+
+function closeNews(){
+  clearInterval(_newsTimer);
+  var overlay = document.getElementById('news-overlay');
+  if(overlay) overlay.style.display = 'none';
+  localStorage.setItem('mialbum_news', _NEWS_VERSION);
+}
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
@@ -2494,6 +2542,54 @@ init();
     <div class="qr-btns">
       <button class="btn" style="flex:1;margin:0;font-size:.8rem" onclick="compartirQr()">📤 Compartir</button>
       <button class="btn" style="flex:1;margin:0;background:#f0f4ff;color:var(--azul);box-shadow:none;font-size:.8rem" onclick="closeQr()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- NOVEDADES POPUP -->
+<div class="news-overlay" id="news-overlay" onclick="if(event.target===this)closeNews()" style="display:none">
+  <div class="news-box">
+    <div class="news-hdr">
+      <div>
+        <h3>🎉 Novedades en MiALBUM</h3>
+        <div class="news-hdr-sub">Actualizaciones recientes</div>
+      </div>
+      <button class="news-close" onclick="closeNews()">✕</button>
+    </div>
+    <div class="news-body">
+      <div class="news-item">
+        <div class="news-ico" style="background:#e8f0ff">📱</div>
+        <div class="news-txt">
+          <h4>QR de intercambio</h4>
+          <p>Genera tu QR desde el ícono ⬛ en el header. Quien lo escanee verá directamente qué láminas tuyas le sirven.</p>
+        </div>
+      </div>
+      <div class="news-item">
+        <div class="news-ico" style="background:#e8f8ee">✅</div>
+        <div class="news-txt">
+          <h4>Publicación automática</h4>
+          <p>Al marcar una lámina como repetida, se publica sola en Intercambios. Ya no necesitas tocar "Publicar".</p>
+        </div>
+      </div>
+      <div class="news-item">
+        <div class="news-ico" style="background:#fff3cd">🌙</div>
+        <div class="news-txt">
+          <h4>Modo oscuro</h4>
+          <p>Activa el modo oscuro con el botón 🌙 en el header. Se recuerda entre sesiones.</p>
+        </div>
+      </div>
+      <div class="news-item">
+        <div class="news-ico" style="background:#f0e8ff">💬</div>
+        <div class="news-txt">
+          <h4>Grupos y mensajes mejorados</h4>
+          <p>Crea grupos con el botón +. Los mensajes llegan en tiempo real sin recargar.</p>
+        </div>
+      </div>
+    </div>
+    <div class="news-footer">
+      <div class="news-timer">Cerrando en <span id="news-countdown">10</span>s</div>
+      <button class="btn" style="margin:0;padding:.4rem .9rem;font-size:.78rem" onclick="closeNews()">Entendido</button>
     </div>
   </div>
 </div>
