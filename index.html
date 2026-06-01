@@ -2598,23 +2598,49 @@ async function reenviarEmail(){
 // ===== RANKING =====
 async function loadRanking(){
   var c = document.getElementById('content');
-  // Get all profiles
-  var pr = await sb.from('profiles').select('id,nombre,apellido,avatar,color,foto_url,comuna,region');
-  if(pr.error||!pr.data){c.innerHTML='<div class="msg-empty">Error cargando ranking</div>';return;}
-  var profiles = pr.data;
-  if(!profiles.length){c.innerHTML='<div class="msg-empty">Sin datos aún</div>';return;}
 
-  // Get coleccion counts per user
-  var cr = await sb.from('coleccion').select('user_id,estado').in('estado',['tengo','repetida']);
+  // Fetch ALL coleccion rows with pagination
+  var allRows = [];
+  var from = 0; var pageSize = 1000;
+  while(true){
+    var cr = await sb.from('coleccion')
+      .select('user_id,estado')
+      .in('estado',['tengo','repetida'])
+      .range(from, from+pageSize-1);
+    if(cr.data && cr.data.length > 0){
+      allRows = allRows.concat(cr.data);
+      if(cr.data.length < pageSize) break;
+      from += pageSize;
+    } else break;
+  }
+
+  // Count per user (each row = 1 unique sticker regardless of cantidad)
   var counts = {};
-  if(cr.data) cr.data.forEach(function(r){
-    if(!counts[r.user_id]) counts[r.user_id]=0;
+  allRows.forEach(function(r){
+    if(!counts[r.user_id]) counts[r.user_id] = 0;
     counts[r.user_id]++;
   });
 
+  // Fetch all profiles with data
+  var uids = Object.keys(counts);
+  if(!uids.length){ c.innerHTML='<div class="msg-empty"><span class="msg-empty-ico">🏆</span><h3>Sin datos aún</h3></div>'; return; }
+
+  var profiles = [];
+  var pfrom = 0;
+  while(true){
+    var pr = await sb.from('profiles')
+      .select('id,nombre,apellido,avatar,color,foto_url,comuna,region')
+      .in('id', uids)
+      .range(pfrom, pfrom+999);
+    if(pr.data && pr.data.length > 0){
+      profiles = profiles.concat(pr.data);
+      if(pr.data.length < 1000) break;
+      pfrom += 1000;
+    } else break;
+  }
+
   var total = S ? S.reduce(function(a,s){return a+s.figs.length;},0) : 994;
 
-  // Sort by count
   var ranked = profiles.map(function(p){
     return {p:p, n:counts[p.id]||0};
   }).filter(function(x){return x.n>0;})
@@ -2623,14 +2649,16 @@ async function loadRanking(){
   var medals = ['🥇','🥈','🥉'];
   var medalCls = ['gold','silver','bronze'];
 
-  var h = '<div style="padding:.75rem 1rem .3rem"><strong style="font-size:.88rem;font-weight:800">🏆 Top coleccionistas</strong>'
-    +'<div style="font-size:.72rem;color:var(--txt2);margin-top:.1rem">'+ranked.length+' coleccionistas activos</div></div>'
+  var h = '<div style="padding:.75rem 1rem .3rem">'
+    +'<strong style="font-size:.88rem;font-weight:800">🏆 Top coleccionistas</strong>'
+    +'<div style="font-size:.72rem;color:var(--txt2);margin-top:.1rem">'+ranked.length+' coleccionistas activos</div>'
+    +'</div>'
     +'<div class="rank-wrap" style="padding:.3rem .75rem .75rem">';
 
   ranked.forEach(function(x, i){
     var p = x.p;
     var pct = Math.round((x.n/total)*100);
-    var isYou = p.id === user.id;
+    var isYou = user && p.id === user.id;
     var posHtml = i<3
       ? '<div class="rank-pos '+medalCls[i]+'">'+medals[i]+'</div>'
       : '<div class="rank-pos other">'+(i+1)+'</div>';
@@ -2640,27 +2668,23 @@ async function loadRanking(){
     h += '<div class="rank-item'+(isYou?' rank-you':'')+'">'
       + posHtml + avHtml
       +'<div class="rank-info">'
-      +'<div class="rank-nm">'+(p.nombre||'Usuario')+' '+(p.apellido||'')+(isYou?' <span style="font-size:.6rem;background:var(--azul);color:#fff;padding:.08rem .35rem;border-radius:6px">Tú</span>':'')+'</div>'
+      +'<div class="rank-nm">'+(p.nombre||'Usuario')+' '+(p.apellido||'')
+      +(isYou?' <span style="font-size:.6rem;background:var(--azul);color:#fff;padding:.08rem .35rem;border-radius:6px">Tú</span>':'')+'</div>'
       +'<div class="rank-loc">📍 '+(p.comuna||'')+((p.region)?' — '+p.region:'')+'</div>'
       +'<div class="rank-prog">'
       +'<div class="rank-pb"><div class="rank-pb-fill" style="width:'+pct+'%"></div></div>'
       +'<div class="rank-pct">'+pct+'%</div>'
-      +'</div>'
-      +'</div>'
+      +'</div></div>'
       +'<div style="text-align:right;flex-shrink:0">'
       +'<div style="font-size:.95rem;font-weight:900;color:var(--azul)">'+x.n+'</div>'
       +'<div style="font-size:.6rem;color:var(--txt2)">láminas</div>'
-      +'</div>'
-      +'</div>';
+      +'</div></div>';
   });
-
-  if(!ranked.length){
-    h += '<div class="msg-empty" style="padding-top:1.5rem"><span class="msg-empty-ico">🏆</span><h3>Sin datos aún</h3><p>¡Sé el primero en coleccionar!</p></div>';
-  }
 
   h += '</div>';
   c.innerHTML = h;
 }
+
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
