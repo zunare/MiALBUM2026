@@ -1207,7 +1207,7 @@ async function markFig(estado){
   }else{
     var cant=estado==='repetida'?(col[code]?col[code].cantidad||1:1):1;
     col[code]={estado:estado,cantidad:cant};
-    await sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:estado,cantidad:cant},{onConflict:'user_id,sticker_code'});
+    await sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:estado,cantidad:cant},{onConflict:'user_id,sticker_code',ignoreDuplicates:false});
     toast((estado==='tengo'?'✅ ':'🔁 ')+figData.nom+' → '+(estado==='tengo'?'Tengo':'Repetida'));
   }
   // Update panel buttons
@@ -2157,9 +2157,14 @@ function changeCantidad(delta){
   col[code]={estado:'repetida',cantidad:cant};
   var cantEl=document.getElementById('p-cantidad');
   if(cantEl)cantEl.textContent=cant;
-  // Save to DB
-  sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:'repetida',cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(r){
-    if(r.error)toast('Error guardando cantidad: '+r.error.message);
+  // Save to DB - use update since record already exists as 'repetida'
+  sb.from('coleccion').update({cantidad:cant}).eq('user_id',user.id).eq('sticker_code',code).then(function(r){
+    if(r.error){
+      // If update fails, try upsert
+      sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:'repetida',cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(r2){
+        if(r2.error)toast('Error: '+r2.error.message);
+      });
+    }
   });
   updateCounters();
   // Update grid
