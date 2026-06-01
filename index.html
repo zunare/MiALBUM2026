@@ -513,6 +513,17 @@ body{font-family:var(--ff);background:var(--bg);color:var(--txt);min-height:100v
 .com-emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;margin-bottom:.6rem}
 .com-emoji-btn{font-size:1.4rem;padding:.4rem;border-radius:8px;border:2px solid var(--borde);background:var(--bg);cursor:pointer;text-align:center;transition:all .15s}
 .com-emoji-btn.sel{border-color:var(--azul);background:#e8f0ff}
+
+/* ===== QR INTERCAMBIO ===== */
+.qr-modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
+.qr-modal.open{display:flex}
+.qr-box{background:var(--card);border-radius:20px;padding:1.5rem;width:88%;max-width:320px;text-align:center}
+.qr-box h3{font-weight:800;font-size:1rem;color:var(--azul);margin-bottom:.3rem}
+.qr-box p{font-size:.75rem;color:var(--txt2);margin-bottom:1rem}
+.qr-canvas-wrap{background:#fff;border-radius:12px;padding:.8rem;display:inline-block;margin-bottom:.8rem}
+.qr-btns{display:flex;gap:.5rem;margin-top:.5rem}
+.qr-scan-result{background:var(--bg);border-radius:14px;padding:.85rem;margin-top:.6rem;text-align:left}
+.qr-scan-nm{font-weight:800;font-size:.95rem;color:var(--txt);margin-bottom:.4rem}
 </style>
 </head>
 <body>
@@ -986,6 +997,7 @@ async function loadUser(authUser){
   goTab('col');
   checkBadge();
   startRealtime();
+  checkQrParam();
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -1775,6 +1787,7 @@ function renderUsr(){
     +'</div>';
   h+='<div style="display:flex;gap:.5rem;margin-top:.35rem">'
     +'<button class="btn" style="flex:1;padding:.6rem;font-size:.8rem;margin:0;background:linear-gradient(135deg,#1a3a8a,#2a5fd6)" onclick="openEditProfile()">✏️ Editar perfil</button>'
+    +'<button class="btn" style="flex:1;padding:.6rem;font-size:.8rem;margin:0;background:linear-gradient(135deg,#7b2fff,#9b59b6)" onclick="showQr()">📱 Mi QR</button>'
     +'</div>';
   h+='<button class="logout-btn" onclick="logout()" style="margin-top:.5rem">Cerrar Sesión</button>';
   h+='<button class="btn-danger" style="margin-top:.4rem" data-m="m-delete" onclick="openModal(this.dataset.m)">🗑️ Eliminar mi cuenta</button>';
@@ -2209,6 +2222,140 @@ function closeFabMenu(){var m=document.getElementById('fab-menu');var o=document
 
 async function openNewGrupoPublico(){await loadAllUsers();_isGroupMode=true;_selMembers=[];showNcModal(true,true);}
 
+
+// ===== QR INTERCAMBIO =====
+// Simple QR using qrcode.js from CDN - loaded on demand
+var _qrLoaded = false;
+
+async function loadQrLib(){
+  if(_qrLoaded||window.QRCode) return;
+  await new Promise(function(resolve,reject){
+    var sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    sc.onload=function(){_qrLoaded=true;resolve();};
+    sc.onerror=reject;
+    document.head.appendChild(sc);
+  });
+}
+
+async function showQr(){
+  if(!user)return;
+  await loadQrLib();
+  var url=window.location.origin+'?intercambio='+user.id;
+  document.getElementById('qr-url-txt').textContent=url;
+  var canvas=document.getElementById('qr-canvas');
+  canvas.innerHTML='';
+  // Clear previous QR
+  canvas.width=180;canvas.height=180;
+  var ctx=canvas.getContext('2d');ctx.clearRect(0,0,180,180);
+  // Generate QR
+  new QRCode(canvas, {
+    text: url,
+    width: 180,
+    height: 180,
+    colorDark: '#1a3a8a',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  document.getElementById('qr-modal').classList.add('open');
+}
+
+function closeQr(){
+  document.getElementById('qr-modal').classList.remove('open');
+}
+
+function compartirQr(){
+  if(!user)return;
+  var url=window.location.origin+'?intercambio='+user.id;
+  var txt='Escanea mi QR o entra a este link para ver mis repetidas del Mundial 2026 y lo que necesito:\n'+url;
+  var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isMobile&&navigator.share){
+    navigator.share({title:'Mi QR MiALBUM 2026',text:txt,url:url}).catch(function(){copyToClipboard(url);});
+  }else{
+    copyToClipboard(url);
+    toast('Link copiado!');
+  }
+}
+
+// ===== HANDLE QR SCAN (intercambio param in URL) =====
+async function checkQrParam(){
+  var params=new URLSearchParams(window.location.search);
+  var uid=params.get('intercambio');
+  if(!uid||!user)return;
+  // Remove param from URL
+  window.history.replaceState({},'',window.location.pathname);
+  // Load target user
+  var pr=await sb.from('profiles').select('*').eq('id',uid).single();
+  if(pr.error||!pr.data){toast('Usuario no encontrado');return;}
+  var p=pr.data;
+  // Load their repetidas
+  var cr=await sb.from('coleccion').select('sticker_code,estado,cantidad').eq('user_id',uid).eq('estado','repetida');
+  var susReps=(cr.data||[]).map(function(r){return r.sticker_code;});
+  if(!susReps.length){toast((p.nombre||'Este usuario')+' no tiene repetidas publicadas');return;}
+  // Show intercambio modal
+  showIntercambioModal(p, susReps, uid);
+}
+
+function showIntercambioModal(p, susReps, uid){
+  var nm=(p.nombre||'')+(p.apellido?' '+p.apellido:'');
+  var meSirven=susReps.filter(function(code){return !getEst(code);});
+  var noMeSirven=susReps.filter(function(code){return getEst(code);});
+  var avHtml=p.foto_url
+    ?'<div style="width:44px;height:44px;border-radius:50%;background-image:url('+p.foto_url+');background-size:cover;background-position:center;border:2px solid rgba(255,255,255,.3)"></div>'
+    :'<div style="width:44px;height:44px;border-radius:50%;background:'+(p.color||'#1a3a8a')+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#fff">'+(p.avatar||'?')+'</div>';
+  var eid=encodeURIComponent(uid);var enm=encodeURIComponent(nm);
+  var old=document.getElementById('int-qr-modal');if(old)old.remove();
+  var div=document.createElement('div');
+  div.id='int-qr-modal';
+  div.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center';
+  div.onclick=function(ev){if(ev.target===div)div.remove();};
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:720px;max-height:85vh;overflow-y:auto;padding-bottom:1.5rem';
+  // Header
+  var hdr=document.createElement('div');
+  hdr.style.cssText='background:linear-gradient(135deg,#050e24,#1a3a8a);padding:1rem;border-radius:20px 20px 0 0;display:flex;align-items:center;gap:.75rem';
+  hdr.innerHTML=avHtml
+    +'<div style="flex:1"><div style="font-weight:800;font-size:1rem;color:#fff">'+nm+'</div>'
+    +'<div style="font-size:.72rem;color:rgba(255,255,255,.6)">📍 '+(p.comuna||'')+((p.region)?' — '+p.region:'')+'</div></div>'
+    +'<button id="int-qr-close-btn2" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:1.2rem;cursor:pointer">✕</button>';
+  box.appendChild(hdr);
+  var closeBtn=hdr.querySelector('#int-qr-close-btn');
+  if(closeBtn)closeBtn.addEventListener('click',function(){var m=document.getElementById('int-qr-modal');if(m)m.remove();});
+  // Body
+  var body=document.createElement('div');
+  body.style.cssText='padding:.9rem 1rem';
+  // Te sirven
+  if(meSirven.length){
+    var s1=document.createElement('div');
+    s1.innerHTML='<div style="font-weight:800;font-size:.85rem;color:var(--verde);margin-bottom:.5rem">✅ Te sirven ('+meSirven.length+')</div>'
+      +'<div class="figs-pub">'+meSirven.map(function(c){return'<div class="fig-pill sirve">'+c+'</div>';}).join('')+'</div>';
+    body.appendChild(s1);
+  }
+  // No te sirven
+  if(noMeSirven.length){
+    var s2=document.createElement('div');
+    s2.style.marginTop='.8rem';
+    s2.innerHTML='<div style="font-weight:800;font-size:.85rem;color:var(--txt2);margin-bottom:.5rem">🔁 Sus otras repetidas ('+noMeSirven.length+')</div>'
+      +'<div class="figs-pub">'+noMeSirven.map(function(c){return'<div class="fig-pill">'+c+'</div>';}).join('')+'</div>';
+    body.appendChild(s2);
+  }
+  // Message button
+  var msgDiv=document.createElement('div');
+  msgDiv.style.marginTop='.9rem';
+  var msgBtn=document.createElement('button');
+  msgBtn.className='btn';msgBtn.style.cssText='width:100%;margin:0';
+  msgBtn.textContent='💬 Enviar mensaje';
+  msgBtn.dataset.uid=eid;msgBtn.dataset.nm=enm;
+  msgBtn.addEventListener('click',function(){
+    document.getElementById('int-qr-modal').remove();
+    openChat(decodeURIComponent(this.dataset.uid),decodeURIComponent(this.dataset.nm));
+  });
+  msgDiv.appendChild(msgBtn);
+  body.appendChild(msgDiv);
+  box.appendChild(body);
+  div.appendChild(box);
+  document.body.appendChild(div);
+}
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
@@ -2310,6 +2457,23 @@ init();
     </div>
     <div class="modal-foot">
       <button class="btn-danger" onclick="doDeleteAccount()">Eliminar mi cuenta definitivamente</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- QR MODAL -->
+<div class="qr-modal" id="qr-modal" onclick="if(event.target===this)closeQr()">
+  <div class="qr-box">
+    <h3>📱 Mi QR de intercambio</h3>
+    <p>Muéstraselo a alguien para que vea tus repetidas</p>
+    <div class="qr-canvas-wrap">
+      <canvas id="qr-canvas"></canvas>
+    </div>
+    <div style="font-size:.72rem;color:var(--txt2);margin-bottom:.8rem" id="qr-url-txt"></div>
+    <div class="qr-btns">
+      <button class="btn" style="flex:1;margin:0;font-size:.8rem" onclick="compartirQr()">📤 Compartir</button>
+      <button class="btn" style="flex:1;margin:0;background:#f0f4ff;color:var(--azul);box-shadow:none;font-size:.8rem" onclick="closeQr()">Cerrar</button>
     </div>
   </div>
 </div>
