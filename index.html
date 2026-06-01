@@ -999,6 +999,8 @@ async function loadUser(authUser){
   checkBadge();
   startRealtime();
   checkQrParam();
+  // Sync existing repetidas to publicaciones on login
+  syncRepetidas();
   setInterval(function(){if(user&&tab!=='msg')checkBadge();},60000);
 }
 
@@ -1216,12 +1218,19 @@ async function markFig(estado){
   if(estado===null){
     delete col[code];
     await sb.from('coleccion').delete().eq('user_id',user.id).eq('sticker_code',code);
+    sb.from('publicaciones').delete().eq('user_id',user.id).eq('sticker_code',code).then(function(){});
     toast(figData.nom+' → quitada');
   }else{
     var cant=estado==='repetida'?(col[code]?col[code].cantidad||1:1):1;
     col[code]={estado:estado,cantidad:cant};
     await sb.from('coleccion').upsert({user_id:user.id,sticker_code:code,estado:estado,cantidad:cant},{onConflict:'user_id,sticker_code',ignoreDuplicates:false});
     toast((estado==='tengo'?'✅ ':'🔁 ')+figData.nom+' → '+(estado==='tengo'?'Tengo':'Repetida'));
+    // Auto-sync publicaciones
+    if(estado==='repetida'){
+      sb.from('publicaciones').upsert({user_id:user.id,sticker_code:code,cantidad:cant},{onConflict:'user_id,sticker_code'}).then(function(){});
+    } else {
+      sb.from('publicaciones').delete().eq('user_id',user.id).eq('sticker_code',code).then(function(){});
+    }
   }
   // Update panel buttons
   updatePanelBtns();
@@ -1256,12 +1265,13 @@ function updateCounters(){
 // ===== INTERCAMBIOS =====
 async function loadInt(){
   var allFigs=[];S.forEach(function(s){s.figs.forEach(function(f){allFigs.push({code:f.code,nom:f.nom,type:f.type,pais:s.nombre,ban:s.bandera});});});
-  // Fetch ALL publications using pagination to bypass 1000 row limit
+  // Read directly from coleccion (auto-published)
   var allRows=[];
   var from=0;var pageSize=1000;
   while(true){
-    var res=await sb.from('publicaciones')
-      .select('sticker_code,user_id,cantidad,profiles(id,nombre,apellido,comuna,region,avatar,color,foto_url)')
+    var res=await sb.from('coleccion')
+      .select('sticker_code,user_id,cantidad,estado,profiles(id,nombre,apellido,comuna,region,avatar,color,foto_url)')
+      .eq('estado','repetida')
       .neq('user_id',user.id)
       .range(from,from+pageSize-1);
     if(res.data&&res.data.length>0){
@@ -1291,7 +1301,7 @@ function renderInt(allFigs){
       var f=null;for(var i=0;i<allFigs.length;i++){if(allFigs[i].code===code){f=allFigs[i];break;}}
       if(f){var on=selFigs.indexOf(code)>=0;h+='<div class="sel-item'+(on?' on':'')+'" data-code="'+code+'" onclick="toggleSel(this)">'+f.ban+' '+code+'</div>';}
     });
-    h+='</div><button class="btn" style="padding:.55rem;font-size:.86rem" onclick="pubReps()">PUBLICAR SELECCIONADAS</button>';
+    h+='</div><div style="font-size:.72rem;color:var(--verde);font-weight:700;text-align:center;padding:.4rem">✅ Tus repetidas se publican automáticamente</div>';
   }
   h+='</div>';
   h+='<div class="int-search-wrap"><span class="search-ico">🔍</span>'
@@ -2289,7 +2299,7 @@ async function checkQrParam(){
   // Load their repetidas
   var cr=await sb.from('coleccion').select('sticker_code,estado,cantidad').eq('user_id',uid).eq('estado','repetida');
   var susReps=(cr.data||[]).map(function(r){return r.sticker_code;});
-  if(!susReps.length){toast((p.nombre||'Este usuario')+' no tiene repetidas publicadas');return;}
+  if(!susReps.length){toast((p.nombre||'Este usuario')+' no tiene repetidas aún');return;}
   // Show intercambio modal
   showIntercambioModal(p, susReps, uid);
 }
@@ -2353,6 +2363,18 @@ function showIntercambioModal(p, susReps, uid){
   box.appendChild(body);
   div.appendChild(box);
   document.body.appendChild(div);
+}
+
+async function syncRepetidas(){
+  // Get current repetidas from coleccion
+  var reps=Object.keys(col).filter(function(c){return getEst(c)==='repetida';});
+  if(!reps.length)return;
+  // Upsert all to publicaciones
+  var rows=reps.map(function(c){return{user_id:user.id,sticker_code:c,cantidad:getCant(c)};});
+  // Do in batches of 100
+  for(var i=0;i<rows.length;i+=100){
+    await sb.from('publicaciones').upsert(rows.slice(i,i+100),{onConflict:'user_id,sticker_code'});
+  }
 }
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
