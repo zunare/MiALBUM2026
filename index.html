@@ -1126,6 +1126,8 @@ async function init(){
 
 // ===== TABS =====
 function goTab(t){
+  // Guest mode restrictions
+  if(_isGuest){goTabGuest(t);return;}
   tab=t;
   if(t!=='col')soloFaltan=false;
   if(t!=='int')intQ='';
@@ -2778,25 +2780,8 @@ function closeGuestPopup(){
   document.getElementById('guest-popup').classList.remove('open');
 }
 
-// Override goTab for guest mode
-var _origGoTab = goTab;
-function goTab(t){
-  if(_isGuest){
-    goTabGuest(t);
-    return;
-  }
-  _origGoTab(t);
-}
-
-// Override openPanel for guest mode
-var _origOpenPanel = openPanel;
-function openPanel(code){
-  if(_isGuest){
-    showGuestPopup('Regístrate para marcar tus láminas y llevar el control de tu colección 📚');
-    return;
-  }
-  _origOpenPanel(code);
-}
+// Guest mode tab handler - only used when _isGuest is true
+// No override of goTab/openPanel needed - handled inline
 function removeFabs(){
   ['fab-overlay','fab-menu'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
   document.querySelectorAll('.msgs-fab').forEach(function(el){el.remove();});
